@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#a8335f">
+<title>Qyra Admin</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: one narrow working column; list of host rows, editor replaces the list. */
+:root{--bg:#f6f3f7;--panel:#ffffff;--ink:#1d1526;--dim:#5f5570;--line:#e2dae8;--accent:#a8335f;--accent-ink:#ffffff;--ok:#1b7443;--warn:#9a3f0c;--chip:#f0e9f4;
+  --sans:'Manrope',system-ui,-apple-system,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141017;--panel:#1e1824;--ink:#f3edf6;--dim:#b4a9bf;--line:#372e40;--accent:#e57ba1;--accent-ink:#1d1526;--ok:#62d293;--warn:#f2a675;--chip:#2a2231;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141017;--panel:#1e1824;--ink:#f3edf6;--dim:#b4a9bf;--line:#372e40;--accent:#e57ba1;--accent-ink:#1d1526;--ok:#62d293;--warn:#f2a675;--chip:#2a2231;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:500 15px/1.5 var(--sans)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.pill{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--chip);color:var(--dim);border-radius:99px;padding:4px 10px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:700 14.5px var(--sans);cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--dim)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13.5px;border-radius:10px}
+.btn.danger{color:var(--warn)}
+.btn[disabled]{opacity:.5;cursor:default}
+.note{min-height:22px;margin:0;font-weight:700;font-size:14px;color:var(--dim)}
+.note.warn{color:var(--warn)}.note.ok{color:var(--ok)}
+.list{display:flex;flex-direction:column;gap:10px}
+.hc{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+.th{width:64px;height:80px;flex:none;border-radius:12px;overflow:hidden;display:grid;place-items:center;background:radial-gradient(120% 90% at 30% 20%,color-mix(in srgb,var(--ac) 70%,#fff),var(--ac));color:#fff;font:800 26px var(--sans)}
+.th img{width:100%;height:100%;object-fit:cover}
+.hi{flex:1;min-width:0}
+.hi b{display:block;font-size:16.5px}
+.hi small{display:block;color:var(--dim);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{font-size:12px;font-weight:700;background:var(--chip);color:var(--dim);border-radius:99px;padding:3px 9px}
+.chip.on{color:var(--ok)}.chip.warn{color:var(--warn)}
+.empty{background:var(--panel);border:1.5px dashed var(--line);border-radius:16px;padding:28px;text-align:center;color:var(--dim)}
+.ed{display:flex;flex-direction:column;gap:16px}
+.edtop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.card h2{font-size:17px;font-weight:800}
+.card .sub{margin:-8px 0 0;color:var(--dim);font-size:13.5px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f.wide{grid-column:1/-1}
+label,.lab{font-size:12.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+input[type=text],input[type=number],input[type=time],select,textarea{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink);font:600 15px var(--sans);padding:9px 11px}
+textarea{min-height:84px;resize:vertical;line-height:1.45}
+.err{color:var(--warn);font-size:13px;font-weight:700;min-height:0}
+.check{display:flex;align-items:center;gap:10px;font-weight:700;text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink);min-height:44px}
+.check input{width:22px;height:22px;accent-color:var(--accent)}
+.slot{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;padding-top:14px;border-top:1px solid var(--line)}
+.slot:first-of-type{border-top:0;padding-top:0}
+@media (max-width:520px){.slot{grid-template-columns:1fr}}
+.ph{width:120px;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1.5px dashed var(--line);display:grid;place-items:center;text-align:center;color:var(--dim);font-size:12.5px;font-weight:700;padding:8px;background:var(--bg)}
+.ph.has{border:0;padding:0}
+.ph img{width:100%;height:100%;object-fit:cover}
+.sl{display:flex;flex-direction:column;gap:8px;min-width:0}
+.sl h3{font-size:15px;font-weight:800}
+.sl p{margin:0;color:var(--dim);font-size:13px}
+.prompt{font:400 13px/1.5 var(--mono);min-height:120px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.prev{display:flex;gap:14px;align-items:center}
+.prev .th{width:96px;height:128px;font-size:38px}
+.prev b{font-size:20px;display:block}
+.prev small{color:var(--dim);display:block}
+.mono{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Qyra Admin</h1><span class="pill" id="who">Not connected</span></div>
+    <div class="acts" id="acts" hidden>
+      <button class="btn pri" id="add" type="button">Add host</button>
+      <button class="btn" id="publish" type="button">Publish to app</button>
+      <span class="btn file">Restore backup<input type="file" id="restore" accept=".zip,application/zip,application/json,.json" aria-label="Restore from a backup file"></span>
+      <button class="btn" id="settings" type="button">GitHub</button>
+    </div>
+  </header>
+  <p class="note" id="note" role="status" aria-live="polite"></p>
+  <section id="connect" class="card" hidden></section>
+  <section id="list" class="list" aria-label="Hosts" hidden></section>
+  <section id="edit" class="ed" hidden></section>
+</div>
+
+<script>
+/* ---------- storage: your own GitHub ----------
+   Private repo  <owner>/qyra-admin : admin.json  (hosts, prompts, looks, drafts)
+   Public repo   <owner>/qyra       : photos/*.jpg and hosts.json (what the app shows)
+   The GitHub token is kept only on this device. */
+const STYLE='Photorealistic glamour fashion photoshoot, stunning beautiful adult woman, professional makeup, glossy hair, luxury magazine quality, sharp focus, 85mm lens, natural skin texture';
+const SLOTS=[{k:'cover',t:'1 · Cover photo',d:'Close portrait with eye contact. This is her card on Discover.'},{k:'full',t:'2 · Full look',d:'Three-quarter length, showing her figure and outfit.'},{k:'world',t:'3 · Her world',d:'Lifestyle shot of her at work or in her city.'}];
+const TZ=['Asia/Kolkata','Asia/Tokyo','Asia/Seoul','Asia/Manila','Asia/Singapore','Asia/Dubai','Asia/Amman','Africa/Lagos','Africa/Nairobi','Europe/London','Europe/Dublin','Europe/Paris','Europe/Oslo','Europe/Moscow','America/New_York','America/Los_Angeles','America/Mexico_City','America/Bogota','America/Sao_Paulo','Australia/Sydney'];
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={ get(k,d){ try{ const v=localStorage.getItem('qyra-admin-'+k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem('qyra-admin-'+k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem('qyra-admin-'+k); }catch(e){} } };
+let cfg=ls.get('cfg',{owner:'HM5891',pub:'qyra',priv:'qyra-admin',token:''});
+let data={hosts:[],published:null}, sha=null, cur=null, saveT=null, saving=false, again=false, armed={}, preview={};
+function note(t,k){ const n=$('#note'); n.textContent=t||''; n.className='note'+(k?' '+k:''); }
+/* GitHub API */
+async function gh(path,opt={}){ const r=await fetch('https://api.github.com'+path,{...opt,headers:{Authorization:'Bearer '+cfg.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28',...(opt.body?{'Content-Type':'application/json'}:{})}});
+  if(!r.ok){ const e=new Error('GitHub '+r.status); e.status=r.status; try{ e.body=await r.json(); }catch(x){} throw e; } return r.status===204?null:r.json(); }
+const enc=p=>p.split('/').map(encodeURIComponent).join('/');
+async function getFile(repo,path){ try{ return await gh(`/repos/${cfg.owner}/${repo}/contents/${enc(path)}`); }catch(e){ if(e.status===404) return null; throw e; } }
+async function putFile(repo,path,b64,msg,s){ return gh(`/repos/${cfg.owner}/${repo}/contents/${enc(path)}`,{method:'PUT',body:JSON.stringify({message:msg,content:b64,...(s?{sha:s}:{})})}); }
+async function delFile(repo,path,msg){ try{ const f=await getFile(repo,path); if(f) await gh(`/repos/${cfg.owner}/${repo}/contents/${enc(path)}`,{method:'DELETE',body:JSON.stringify({message:msg,sha:f.sha})}); }catch(e){} }
+const b64e=str=>{ const b=new TextEncoder().encode(str); let s=''; for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(s); };
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(String(s).replace(/\s/g,'')),c=>c.charCodeAt(0)));
+const blobB64=blob=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=rej; fr.readAsDataURL(blob); });
+const ghErr=e=>e.status===401?'GitHub refused the token. Check it in GitHub settings.':e.status===403?'GitHub blocked the request (token needs the “repo” scope, or try again in a minute).':e.status===404?'Repo not found. Check the names in GitHub settings.':e.status===409||e.status===422?'GitHub had a conflict. Tap again.':(e.message==='Failed to fetch'?'No internet connection.':e.message||'Something went wrong.');
+/* load / save admin.json in the private repo */
+async function load(){ const f=await getFile(cfg.priv,'admin.json'); if(f){ data=JSON.parse(b64d(f.content)); sha=f.sha; } else { data={hosts:[],published:null}; sha=null; } data.hosts=data.hosts||[]; }
+function scheduleSave(now){ clearTimeout(saveT); const s=$('#saved'); if(s){ s.textContent='Saving…'; s.className='note'; } saveT=setTimeout(save,now?0:1500); }
+async function save(){ if(saving){ again=true; return; } saving=true;
+  try{ const r=await putFile(cfg.priv,'admin.json',b64e(JSON.stringify(data,null,1)),'Admin: update hosts',sha); sha=r.content.sha; const s=$('#saved'); if(s){ s.textContent='Saved to GitHub'; s.className='note ok'; } }
+  catch(e){ if(e.status===409||e.status===422){ try{ const f=await getFile(cfg.priv,'admin.json'); sha=f?f.sha:null; again=true; }catch(x){} }
+    const s=$('#saved'); if(s){ s.textContent='Not saved: '+ghErr(e); s.className='note warn'; } }
+  saving=false; if(again){ again=false; save(); } }
+/* helpers */
+function buildPrompts(h){ const L=h.look||{}; const who=`${h.age}-year-old ${L.nationality||h.country||''} woman`.replace(/\s+/g,' ');
+  return { cover:`${STYLE}. Close portrait of a ${who} from ${h.city}, ${L.hair}, looking into the camera with an inviting smile, wearing ${L.outfit}, soft golden-hour light, blurred ${h.city} background.`,
+    full:`${STYLE}. Three-quarter length shot of a ${who}, ${L.figure} figure, ${L.hair}, wearing ${L.outfit}, confident elegant pose, fully clothed, studio lighting, warm plain backdrop.`,
+    world:`${STYLE}. Candid lifestyle photo of a ${who}, ${L.hair}, ${L.setting}, warm natural light, smiling at the camera.` }; }
+function tzNow(tz){ try{ const d=new Date(); const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+  return {mins:+p.find(x=>x.type==='hour').value*60+ +p.find(x=>x.type==='minute').value,label:new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(d).toLowerCase()}; }catch(e){ return null; } }
+const toMin=s=>{ const [h,m]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(m||0); };
+function isOnline(h){ if(h.alwaysOn) return true; const t=tzNow(h.tz); if(!t) return false; let a=toMin(h.from), b=toMin(h.until); if(b<=a) b+=1440; return (t.mins>=a&&t.mins<b)||(t.mins+1440>=a&&t.mins+1440<b); }
+const photoUrl=p=>!p||!p.path?'':(preview[p.path]||`https://raw.githubusercontent.com/${cfg.owner}/${cfg.pub}/main/${p.path}`);
+const thumb=(h,cls='th')=>{ const u=photoUrl((h.photos||[]).find(p=>p&&p.path)); return `<div class="${cls}" style="--ac:${esc(h.accent||'#a8335f')}">${u?`<img src="${esc(u)}" alt="">`:esc((h.name||'?').trim()[0]||'?')}</div>`; };
+function copyText(t,ta){ try{ if(window.QyraNative){ QyraNative.postMessage(JSON.stringify({copy:t})); return Promise.resolve(); } }catch(e){} return navigator.clipboard.writeText(t).catch(()=>{ ta.focus(); ta.select(); throw new Error('select'); }); }
+/* connect screen */
+function showConnect(msg){ $('#acts').hidden=true; $('#list').hidden=true; $('#edit').hidden=true; const C=$('#connect'); C.hidden=false; $('#who').textContent='Not connected';
+  C.innerHTML=`<h2>Connect your GitHub</h2>
+   <p class="sub" style="margin:0">Qyra Admin keeps your hosts and prompts in a <b>private</b> repo and puts photos in the app repo. Your token stays on this device only.</p>
+   <div class="grid">
+    <div class="f wide"><label for="c-token">GitHub token (classic, with “repo” ticked)</label><input type="password" id="c-token" autocomplete="off" value="${esc(cfg.token)}" placeholder="ghp_…"></div>
+    <div class="f"><label for="c-owner">GitHub username</label><input type="text" id="c-owner" value="${esc(cfg.owner)}"></div>
+    <div class="f"><label for="c-pub">App repo (public)</label><input type="text" id="c-pub" value="${esc(cfg.pub)}"></div>
+    <div class="f"><label for="c-priv">Admin data repo (private)</label><input type="text" id="c-priv" value="${esc(cfg.priv)}"></div>
+   </div>
+   <div class="row"><button class="btn pri" type="button" id="c-go">Connect</button>${cfg.token?'<button class="btn danger" type="button" id="c-forget">Forget token on this device</button>':''}</div>
+   ${msg?`<p class="note warn" style="margin:0">${esc(msg)}</p>`:''}`; }
+async function connect(){ cfg={token:$('#c-token').value.trim(),owner:$('#c-owner').value.trim(),pub:$('#c-pub').value.trim(),priv:$('#c-priv').value.trim()};
+  if(!cfg.token) return showConnect('Paste your GitHub token first.');
+  note('Connecting to GitHub…');
+  try{ await gh(`/repos/${cfg.owner}/${cfg.pub}`);
+    try{ const r=await gh(`/repos/${cfg.owner}/${cfg.priv}`); if(!r.private){ note(''); return showConnect(`${cfg.priv} is public. Make it private on GitHub (Settings → Danger zone → Change visibility), then connect again.`); } }
+    catch(e){ if(e.status!==404) throw e; await gh('/user/repos',{method:'POST',body:JSON.stringify({name:cfg.priv,private:true,auto_init:true,description:'Qyra Admin data (private)'})}); note(`Created your private repo ${cfg.priv}.`,'ok'); await new Promise(r=>setTimeout(r,1500)); }
+    ls.set('cfg',cfg); await start(); }
+  catch(e){ note(''); showConnect(ghErr(e)); } }
+/* list */
+function renderList(){ const L=$('#list'); $('#connect').hidden=true; $('#acts').hidden=false; $('#edit').hidden=true; L.hidden=false;
+  const pub=data.published?`Last published ${new Date(data.published).toLocaleString()}`:'Not published to the app yet';
+  if(!data.hosts.length){ L.innerHTML=`<div class="empty"><b>No hosts yet.</b><br>Tap <b>Restore backup</b> to bring in your hosts from the old admin, or <b>Add host</b> to start fresh.</div>`; return; }
+  L.innerHTML=`<p class="mono" style="margin:0">${esc(pub)}</p>`+data.hosts.map(h=>{ const on=isOnline(h), t=tzNow(h.tz), n=(h.photos||[]).filter(p=>p&&p.path).length;
+    return `<article class="hc">${thumb(h)}<div class="hi"><b>${esc(h.name)}, ${esc(h.age)}</b><small>${esc(h.job)} · ${esc(h.city)}, ${esc(h.country)}</small>
+      <div class="chips"><span class="chip ${on?'on':''}">${on?'Online now':'Offline'}${t?' · '+esc(t.label)+' there':''}</span><span class="chip ${n<3?'warn':''}">${n}/3 photos</span>${h.hidden?'<span class="chip warn">Hidden from app</span>':''}${h.alwaysOn?'<span class="chip">Always online</span>':''}</div></div>
+      <a class="btn sm" href="#edit-${esc(h.id)}" aria-label="Edit ${esc(h.name)}">Edit</a></article>`; }).join(''); }
+function field(id,label,val,type='text',extra=''){ return `<div class="f ${extra}"><label for="f-${id}">${label}</label><input type="${type}" id="f-${id}" data-k="${id}" value="${esc(val)}"></div>`; }
+function area(id,label,val,extra='wide'){ return `<div class="f ${extra}"><label for="f-${id}">${label}</label><textarea id="f-${id}" data-k="${id}">${esc(val)}</textarea></div>`; }
+function openEditor(id){ const h=data.hosts.find(x=>x.id===id); if(!h){ location.hash=''; return; }
+  cur=h; cur.photos=[0,1,2].map(i=>(cur.photos||[])[i]||null); cur.look=cur.look||{}; cur.prompts=cur.prompts||buildPrompts(cur); armed={};
+  const L=cur.look, E=$('#edit');
+  E.innerHTML=`<div class="edtop"><a class="btn sm" href="#">← All hosts</a><span class="note" id="saved"></span></div>
+  <div class="card"><div class="prev" id="prev"></div></div>
+  <div class="card"><h2>Photos and prompts</h2><p class="sub">Copy a prompt, paste it into an AI image maker, then upload the photo here. Prompts stay in your private repo.</p>
+    ${SLOTS.map((s,i)=>`<div class="slot" id="slot-${i}"></div>`).join('')}
+    <div class="row"><button class="btn sm" type="button" id="rewrite">Rewrite all 3 prompts from her look</button></div></div>
+  <div class="card"><h2>Profile</h2><div class="grid">
+    ${field('name','Name',cur.name)}${field('age','Age (18 or older)',cur.age,'number')}
+    <div class="f wide err" id="age-err"></div>
+    ${field('country','Country',cur.country)}${field('city','City',cur.city)}${field('job','Job',cur.job,'text','wide')}
+    ${field('status','Status line (changes with her mood)',cur.status,'text','wide')}
+    ${area('greeting','First message to a new user',cur.greeting)}${area('about','About her',cur.about)}
+    ${field('moods','Moods (comma separated)',Array.isArray(cur.moods)?cur.moods.join(', '):cur.moods,'text','wide')}${field('voice','Voice',cur.voice,'text','wide')}
+    <div class="f"><label for="f-accent">Card colour</label><input type="color" id="f-accent" data-k="accent" value="${esc(cur.accent||'#a8335f')}" style="width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--bg)"></div>
+  </div></div>
+  <div class="card"><h2>Online schedule</h2><p class="sub">She comes online by her own local time.</p><div class="grid">
+    <div class="f wide"><label for="f-tz">Her time zone</label><select id="f-tz" data-k="tz">${TZ.concat(TZ.includes(cur.tz)?[]:[cur.tz]).filter(Boolean).map(z=>`<option ${z===cur.tz?'selected':''}>${esc(z)}</option>`).join('')}</select></div>
+    ${field('from','Online from',cur.from,'time')}${field('until','Online until',cur.until,'time')}
+    <div class="f wide"><label class="check"><input type="checkbox" id="f-alwaysOn" data-k="alwaysOn" ${cur.alwaysOn?'checked':''}>Always online (for testing)</label></div>
+  </div></div>
+  <div class="card"><h2>Her look</h2><p class="sub">Used to write her photo prompts, and Figure is used by the app's filter.</p><div class="grid">
+    ${field('look.nationality','Nationality',L.nationality)}
+    <div class="f"><label for="f-look.figure">Figure</label><select id="f-look.figure" data-k="look.figure">${['slim','athletic','average','curvy','full'].map(o=>`<option ${o===L.figure?'selected':''}>${o}</option>`).join('')}</select></div>
+    ${field('look.hair','Hair',L.hair,'text','wide')}${field('look.outfit','Outfit',L.outfit,'text','wide')}${field('look.setting','Her world (place and activity)',L.setting,'text','wide')}
+  </div></div>
+  <div class="card"><h2>Visibility</h2>
+    <label class="check"><input type="checkbox" id="f-hidden" data-k="hidden" ${cur.hidden?'checked':''}>Hide her from the app</label>
+    <p class="sub" style="margin:0">Changes reach the app when you tap <b>Publish to app</b> on the main screen.</p>
+    <div class="row"><button class="btn sm danger" type="button" id="del">Delete host</button></div></div>`;
+  SLOTS.forEach((_,i)=>renderSlot(i)); renderPrev();
+  $('#list').hidden=true; E.hidden=false; window.scrollTo(0,0); }
+function renderPrev(){ const on=isOnline(cur), t=tzNow(cur.tz);
+  $('#prev').innerHTML=`${thumb(cur)}<div><span class="lab">How she looks in the app</span><b>${esc(cur.name)}, ${esc(cur.age)}</b><small>${esc(cur.city)}, ${esc(cur.country)}</small><small style="color:${on?'var(--ok)':'var(--dim)'};font-weight:700">${on?'Online now':'Offline'}${t?' · '+esc(t.label)+' there':''}</small><small>“${esc(cur.status)}”</small></div>`; }
+function renderSlot(i){ const s=SLOTS[i], p=cur.photos[i], u=photoUrl(p);
+  $('#slot-'+i).innerHTML=`<div class="ph ${u?'has':''}">${u?`<img src="${esc(u)}" alt="${esc(s.t)} of ${esc(cur.name)}">`:'No photo yet'}</div>
+   <div class="sl"><h3>${s.t}</h3><p>${s.d}</p>
+   <label class="lab" for="p-${i}">Prompt</label><textarea class="prompt" id="p-${i}" data-p="${s.k}">${esc(cur.prompts[s.k])}</textarea>
+   <div class="row"><button class="btn sm" type="button" data-copy="${i}">Copy prompt</button>
+   <span class="btn sm pri file">${u?'Replace photo':'Upload photo'}<input type="file" accept="image/*" data-up="${i}" aria-label="Upload ${esc(s.t)}"></span>
+   ${u?`<button class="btn sm danger" type="button" data-rm="${i}">${armed['rm'+i]?'Tap again to remove':'Remove'}</button>`:''}</div></div>`; }
+function setPath(o,k,v){ const p=k.split('.'); if(p.length>1){ o[p[0]]=o[p[0]]||{}; o[p[0]][p[1]]=v; } else o[k]=v; }
+document.addEventListener('input',e=>{ const el=e.target; if(!cur||$('#edit').hidden) return;
+  if(el.dataset.p){ cur.prompts[el.dataset.p]=el.value; return scheduleSave(); }
+  const k=el.dataset.k; if(!k) return; let v=el.type==='checkbox'?el.checked:el.value;
+  if(k==='age'){ const n=parseInt(v,10); if(!(n>=18&&n<=99)){ $('#age-err').textContent='Hosts must be 18 or older. Enter an age from 18 to 99.'; return; } $('#age-err').textContent=''; v=n; }
+  setPath(cur,k,v); renderPrev(); scheduleSave(); });
+document.addEventListener('change',e=>{ const el=e.target; if(el.dataset.k&&(el.tagName==='SELECT'||el.type==='checkbox'||el.type==='color')) el.dispatchEvent(new Event('input',{bubbles:true}));
+  if(el.dataset.up) upload(+el.dataset.up,el.files[0]); if(el.id==='restore') restore(el.files[0]); });
+document.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='c-go') return connect();
+  if(b.id==='c-forget'){ cfg.token=''; ls.set('cfg',cfg); return showConnect('Token removed from this device.'); }
+  if(b.id==='settings') return showConnect();
+  if(b.dataset.copy!=null){ const ta=$('#p-'+b.dataset.copy); try{ await copyText(ta.value,ta); b.textContent='Copied'; }catch(x){ b.textContent='Selected: copy it'; } setTimeout(()=>{ b.textContent='Copy prompt'; },1600); return; }
+  if(b.dataset.rm!=null){ const i=+b.dataset.rm; if(!armed['rm'+i]){ armed['rm'+i]=1; renderSlot(i); setTimeout(()=>{ if(armed['rm'+i]&&cur){ armed['rm'+i]=0; renderSlot(i); } },3000); return; }
+    armed['rm'+i]=0; const old=cur.photos[i]; cur.photos[i]=null; renderSlot(i); renderPrev(); scheduleSave(true); if(old&&old.path) delFile(cfg.pub,old.path,'Admin: remove photo'); return; }
+  if(b.id==='rewrite'){ if(!armed.rw){ armed.rw=1; b.textContent='Tap again: this replaces all 3 prompts'; setTimeout(()=>{ armed.rw=0; if(b.isConnected) b.textContent='Rewrite all 3 prompts from her look'; },3000); return; }
+    armed.rw=0; cur.prompts=buildPrompts(cur); SLOTS.forEach((_,i)=>renderSlot(i)); b.textContent='Rewrite all 3 prompts from her look'; scheduleSave(true); return; }
+  if(b.id==='del'){ if(!armed.del){ armed.del=1; b.textContent=`Tap again to delete ${cur.name} for good`; setTimeout(()=>{ armed.del=0; if(b.isConnected) b.textContent='Delete host'; },3500); return; }
+    const gone=cur; data.hosts=data.hosts.filter(h=>h!==gone); cur=null; scheduleSave(true); gone.photos.filter(p=>p&&p.path).forEach(p=>delFile(cfg.pub,p.path,'Admin: remove photo')); note(`${gone.name} deleted. Publish to remove her from the app.`,'ok'); location.hash=''; return; }
+  if(b.id==='add') return addHost(); if(b.id==='publish') return publish(); });
+async function compress(file){ const bmp=await createImageBitmap(file); const s=Math.min(1,1440/Math.max(bmp.width,bmp.height)); const c=document.createElement('canvas');
+  c.width=Math.round(bmp.width*s); c.height=Math.round(bmp.height*s); c.getContext('2d').drawImage(bmp,0,0,c.width,c.height); return await new Promise((r,j)=>c.toBlob(x=>x?r(x):j(new Error('encode')),'image/jpeg',.86)); }
+async function putPhoto(hostId,slot,blob){ const path=`photos/${hostId}-${slot+1}-${Date.now().toString(36)}.jpg`; await putFile(cfg.pub,path,await blobB64(blob),`Admin: photo for ${hostId}`); preview[path]=URL.createObjectURL(blob); return {path}; }
+async function upload(i,file){ if(!file||!cur) return; const h=cur; const ph=$('#slot-'+i).querySelector('.ph'); ph.textContent='Uploading…';
+  let blob; try{ blob=await compress(file); }catch(e){ note('This photo could not be read. Save it as JPG or PNG and try again.','warn'); return renderSlot(i); }
+  try{ const p=await putPhoto(h.id,i,blob); const old=h.photos[i]; h.photos[i]=p; if(cur===h){ renderSlot(i); renderPrev(); } scheduleSave(true); note('Photo saved to GitHub. Tap Publish to show it in the app.','ok'); if(old&&old.path) delFile(cfg.pub,old.path,'Admin: replace photo'); }
+  catch(e){ note('Upload failed: '+ghErr(e),'warn'); if(cur===h) renderSlot(i); } }
+function addHost(){ const id='host-'+Math.random().toString(36).slice(2,8);
+  const h={id,name:'New host',age:25,country:'India',city:'Mumbai',job:'Her job',tz:'Asia/Kolkata',from:'20:00',until:'23:00',alwaysOn:false,hidden:true,status:'Just got home. Talk to me?',greeting:'Hi! I just got online. How was your day?',about:'Write two or three lines about her personality.',moods:'playful, caring, moody',voice:'warm and clear',accent:'#a8335f',
+    photos:[null,null,null],look:{nationality:'Indian',figure:'average',hair:'long dark hair',outfit:'an elegant dress',setting:'at a café in her city'}};
+  h.prompts=buildPrompts(h); data.hosts.push(h); scheduleSave(true); note('New host added. She stays hidden from the app until you untick “Hide her”.','ok'); location.hash='edit-'+id; }
+async function publish(){ const live=data.hosts.filter(h=>!h.hidden); if(!live.length){ note('No visible hosts to publish. Untick “Hide her” on at least one host.','warn'); return; }
+  const btn=$('#publish'); btn.disabled=true; note('Publishing to the app…');
+  try{ const out=live.map(h=>({id:h.id,name:h.name,age:h.age,country:h.country,city:h.city,job:h.job,tz:h.tz,from:h.from,until:h.until,alwaysOn:!!h.alwaysOn,status:h.status,greeting:h.greeting,about:h.about,
+      moods:(Array.isArray(h.moods)?h.moods:String(h.moods||'').split(',')).map(s=>String(s).trim()).filter(Boolean),voice:h.voice,accent:h.accent,figure:(h.look||{}).figure||'',photos:(h.photos||[]).map(p=>p&&p.path?p.path:null)}));
+    const f=await getFile(cfg.pub,'hosts.json');
+    await putFile(cfg.pub,'hosts.json',b64e(JSON.stringify({app:'Qyra',updated:new Date().toISOString(),hosts:out},null,1)),`Publish ${out.length} hosts`,f&&f.sha);
+    data.published=new Date().toISOString(); scheduleSave(true); renderList();
+    note(`Published ${out.length} hosts. The app shows them within a few minutes.`,'ok'); }
+  catch(e){ note('Publish failed: '+ghErr(e),'warn'); } btn.disabled=false; }
+async function restore(file){ $('#restore').value=''; if(!file) return;
+  try{ let j, zip=null;
+    if(/\.zip$/i.test(file.name)){ if(!window.JSZip) throw new Error('nozip'); zip=await JSZip.loadAsync(file); const f=zip.file('backup.json'); if(!f) throw new Error('shape'); j=JSON.parse(await f.async('string')); }
+    else j=JSON.parse(await file.text());
+    if(!Array.isArray(j.hosts)) throw new Error('shape');
+    let done=0, pics=0;
+    for(const src of j.hosts){ if(!src||!(src.age>=18)) continue; const {photoFiles,...h}=src; h.id=h.id||('host-'+Math.random().toString(36).slice(2,8)); h.photos=[null,null,null];
+      if(zip&&Array.isArray(photoFiles)) for(let i=0;i<3;i++){ const pf=photoFiles[i]&&zip.file(photoFiles[i]); if(!pf) continue; note(`Uploading photos to GitHub… ${pics+1}`);
+        h.photos[i]=await putPhoto(h.id,i,new Blob([await pf.async('arraybuffer')],{type:'image/jpeg'})); pics++; }
+      if(!h.prompts) h.prompts=buildPrompts(h);
+      const k=data.hosts.findIndex(x=>x.id===h.id); if(k>=0) data.hosts[k]=h; else data.hosts.push(h); done++; }
+    data.hosts.sort((a,b)=>(a.order||99)-(b.order||99)); await save(); renderList();
+    note(`Restored ${done} hosts${pics?` and ${pics} photos`:''}. Tap Publish to show them in the app.`,'ok'); }
+  catch(e){ note(e.message==='nozip'?'The zip tool did not load. Reload and try again.':e.message==='shape'||e instanceof SyntaxError?'That file is not a Qyra backup.':'Restore stopped: '+ghErr(e),'warn'); } }
+function route(){ if(!cfg.token) return; const m=location.hash.match(/^#edit-(.+)$/);
+  if(m){ if(!cur||cur.id!==m[1]) openEditor(m[1]); return; } cur=null; renderList(); }
+window.addEventListener('hashchange',()=>{ if(cfg.token&&$('#connect').hidden) route(); });
+async function start(){ note('Loading your hosts from GitHub…');
+  try{ await load(); $('#who').textContent=`${cfg.owner} · private`; note(''); route(); }
+  catch(e){ showConnect(ghErr(e)); note(''); } }
+if(cfg.token) start(); else showConnect();
+</script>
+
+</body>
+</html>
