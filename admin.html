@@ -125,12 +125,20 @@ const blobB64=blob=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onloa
 const ghErr=e=>e.status===401?'GitHub refused the token. Check it in GitHub settings.':e.status===403?'GitHub blocked the request (token needs the “repo” scope, or try again in a minute).':e.status===404?'Repo not found. Check the names in GitHub settings.':e.status===409||e.status===422?'GitHub had a conflict. Tap again.':(e.message==='Failed to fetch'?'No internet connection.':e.message||'Something went wrong.');
 /* load / save admin.json in the private repo */
 async function load(){ const f=await getFile(cfg.priv,'admin.json'); if(f){ data=JSON.parse(b64d(f.content)); sha=f.sha; } else { data={hosts:[],published:null}; sha=null; } data.hosts=data.hosts||[]; }
-function scheduleSave(now){ clearTimeout(saveT); const s=$('#saved'); if(s){ s.textContent='Saving…'; s.className='note'; } saveT=setTimeout(save,now?0:1500); }
+function scheduleSave(now){ clearTimeout(saveT); const s=$('#saved'); if(s){ s.textContent='Saving…'; s.className='note'; } _pending=true; saveT=setTimeout(()=>{ _pending=false; save(); },now?0:1500); }
 async function save(){ if(saving){ again=true; return; } saving=true;
   try{ const r=await putFile(cfg.priv,'admin.json',b64e(JSON.stringify(data,null,1)),'Admin: update hosts',sha); sha=r.content.sha; const s=$('#saved'); if(s){ s.textContent='Saved to GitHub'; s.className='note ok'; } }
-  catch(e){ if(e.status===409||e.status===422){ try{ const f=await getFile(cfg.priv,'admin.json'); sha=f?f.sha:null; again=true; }catch(x){} }
+  catch(e){ if(e.status===409||e.status===422){ saving=false; again=false; await reloadNewer('Your hosts were changed somewhere else, so Admin loaded the newest version. Please redo your last change.'); return; }
     const s=$('#saved'); if(s){ s.textContent='Not saved: '+ghErr(e); s.className='note warn'; } }
   saving=false; if(again){ again=false; save(); } }
+/* never overwrite newer data: reload it instead */
+async function reloadNewer(msg){ try{ const f=await getFile(cfg.priv,'admin.json'); if(f&&f.sha===sha) return false; clearTimeout(saveT);
+    data=f?JSON.parse(b64d(f.content)):{hosts:[],published:null}; data.hosts=data.hosts||[]; sha=f?f.sha:null;
+    const id=cur&&cur.id; cur=null; $('#list').innerHTML='';
+    if(id&&data.hosts.find(h=>h.id===id)) openEditor(id); else { if(location.hash) location.hash=''; renderList(); }
+    note(msg,'warn'); return true; }catch(e){ return false; } }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&cfg.token&&$('#connect').hidden&&!saving&&!saveT_pending()) reloadNewer('Loaded the latest hosts from GitHub.'); });
+let _pending=false; const saveT_pending=()=>_pending;
 /* helpers */
 function buildPrompts(h){ const L=h.look||{}; const who=`${h.age}-year-old ${L.nationality||h.country||''} woman`.replace(/\s+/g,' ');
   return { cover:`${STYLE}. Close portrait of a ${who} from ${h.city}, ${L.hair}, looking into the camera with an inviting smile, wearing ${L.outfit}, soft golden-hour light, blurred ${h.city} background.`,
