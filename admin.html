@@ -54,7 +54,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .f{display:flex;flex-direction:column;gap:5px;min-width:0}
 .f.wide{grid-column:1/-1}
 label,.lab{font-size:12.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
-input[type=text],input[type=number],input[type=time],select,textarea{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink);font:600 15px var(--sans);padding:9px 11px}
+input[type=text],input[type=password],input[type=number],input[type=time],select,textarea{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink);font:600 15px var(--sans);padding:9px 11px}
 textarea{min-height:84px;resize:vertical;line-height:1.45}
 .err{color:var(--warn);font-size:13px;font-weight:700;min-height:0}
 .check{display:flex;align-items:center;gap:10px;font-weight:700;text-transform:none;letter-spacing:0;font-size:14.5px;color:var(--ink);min-height:44px}
@@ -164,13 +164,27 @@ async function connect(){ cfg={token:$('#c-token').value.trim(),owner:$('#c-owne
     ls.set('cfg',cfg); await start(); }
   catch(e){ note(''); showConnect(ghErr(e)); } }
 /* list */
+let LF={q:'',show:'all'};
+const hasCover=h=>!!(h.photos&&h.photos[0]&&h.photos[0].path);
 function renderList(){ const L=$('#list'); $('#connect').hidden=true; $('#acts').hidden=false; $('#edit').hidden=true; L.hidden=false;
-  const pub=data.published?`Last published ${new Date(data.published).toLocaleString()}`:'Not published to the app yet';
-  if(!data.hosts.length){ L.innerHTML=`<div class="empty"><b>No hosts yet.</b><br>Tap <b>Restore backup</b> to bring in your hosts from the old admin, or <b>Add host</b> to start fresh.</div>`; return; }
-  L.innerHTML=`<p class="mono" style="margin:0">${esc(pub)}</p>`+data.hosts.map(h=>{ const on=isOnline(h), t=tzNow(h.tz), n=(h.photos||[]).filter(p=>p&&p.path).length;
+  if(!data.hosts.length){ L.innerHTML=`<div class="empty"><b>No hosts yet.</b><br>Tap <b>Restore backup</b> to bring in your hosts, or <b>Add host</b> to start fresh.</div>`; return; }
+  if(!$('#rows')){ L.innerHTML=`<p class="mono" id="pubinfo" style="margin:0"></p>
+    <div class="row"><input type="search" id="lq" placeholder="Search name, country, city, job" aria-label="Search hosts" style="flex:1;min-width:0;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);font:600 15px var(--sans);padding:9px 11px">
+    <select id="lshow" aria-label="Show" style="min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);font:700 14px var(--sans);padding:0 10px">
+      <option value="all">All hosts</option><option value="nocover">Needs cover photo</option><option value="cover">Has cover photo</option><option value="hidden">Hidden</option></select></div>
+    <p class="mono" id="lcount" style="margin:0"></p><div class="list" id="rows"></div>`;
+    $('#lq').value=LF.q; $('#lshow').value=LF.show;
+    $('#lq').addEventListener('input',e=>{ LF.q=e.target.value; rows(); }); $('#lshow').addEventListener('change',e=>{ LF.show=e.target.value; rows(); }); }
+  rows(); }
+function rows(){ const q=LF.q.trim().toLowerCase();
+  const list=data.hosts.filter(h=>(!q||[h.name,h.country,h.city,h.job].some(x=>String(x||'').toLowerCase().includes(q)))&&(LF.show==='all'||(LF.show==='nocover'&&!hasCover(h))||(LF.show==='cover'&&hasCover(h))||(LF.show==='hidden'&&h.hidden)));
+  const ready=data.hosts.filter(h=>!h.hidden&&hasCover(h)).length;
+  $('#pubinfo').textContent=(data.published?`Last published ${new Date(data.published).toLocaleString()}`:'Not published to the app yet')+` · ${ready} of ${data.hosts.length} ready (cover photo, not hidden)`;
+  $('#lcount').textContent=`Showing ${list.length} host${list.length===1?'':'s'}`;
+  $('#rows').innerHTML=list.length?list.map(h=>{ const on=isOnline(h), t=tzNow(h.tz), n=(h.photos||[]).filter(p=>p&&p.path).length;
     return `<article class="hc">${thumb(h)}<div class="hi"><b>${esc(h.name)}, ${esc(h.age)}</b><small>${esc(h.job)} · ${esc(h.city)}, ${esc(h.country)}</small>
-      <div class="chips"><span class="chip ${on?'on':''}">${on?'Online now':'Offline'}${t?' · '+esc(t.label)+' there':''}</span><span class="chip ${n<3?'warn':''}">${n}/3 photos</span>${h.hidden?'<span class="chip warn">Hidden from app</span>':''}${h.alwaysOn?'<span class="chip">Always online</span>':''}</div></div>
-      <a class="btn sm" href="#edit-${esc(h.id)}" aria-label="Edit ${esc(h.name)}">Edit</a></article>`; }).join(''); }
+      <div class="chips"><span class="chip ${on?'on':''}">${on?'Online now':'Offline'}${t?' · '+esc(t.label)+' there':''}</span><span class="chip ${hasCover(h)?'':'warn'}">${hasCover(h)?n+'/3 photos':'Needs cover photo'}</span>${h.hidden?'<span class="chip warn">Hidden from app</span>':''}${h.alwaysOn?'<span class="chip">Always online</span>':''}</div></div>
+      <a class="btn sm" href="#edit-${esc(h.id)}" aria-label="Edit ${esc(h.name)}">Edit</a></article>`; }).join(''):'<div class="empty">No hosts match.</div>'; }
 function field(id,label,val,type='text',extra=''){ return `<div class="f ${extra}"><label for="f-${id}">${label}</label><input type="${type}" id="f-${id}" data-k="${id}" value="${esc(val)}"></div>`; }
 function area(id,label,val,extra='wide'){ return `<div class="f ${extra}"><label for="f-${id}">${label}</label><textarea id="f-${id}" data-k="${id}">${esc(val)}</textarea></div>`; }
 function openEditor(id){ const h=data.hosts.find(x=>x.id===id); if(!h){ location.hash=''; return; }
@@ -246,14 +260,14 @@ function addHost(){ const id='host-'+Math.random().toString(36).slice(2,8);
   const h={id,name:'New host',age:25,country:'India',city:'Mumbai',job:'Her job',tz:'Asia/Kolkata',from:'20:00',until:'23:00',alwaysOn:false,hidden:true,status:'Just got home. Talk to me?',greeting:'Hi! I just got online. How was your day?',about:'Write two or three lines about her personality.',moods:'playful, caring, moody',voice:'warm and clear',accent:'#a8335f',
     photos:[null,null,null],look:{nationality:'Indian',figure:'average',hair:'long dark hair',outfit:'an elegant dress',setting:'at a café in her city'}};
   h.prompts=buildPrompts(h); data.hosts.push(h); scheduleSave(true); note('New host added. She stays hidden from the app until you untick “Hide her”.','ok'); location.hash='edit-'+id; }
-async function publish(){ const live=data.hosts.filter(h=>!h.hidden); if(!live.length){ note('No visible hosts to publish. Untick “Hide her” on at least one host.','warn'); return; }
+async function publish(){ const live=data.hosts.filter(h=>!h.hidden&&hasCover(h)), skipped=data.hosts.filter(h=>!h.hidden&&!hasCover(h)).length; if(!live.length){ note('No host has a cover photo yet. Add a Cover photo to at least one host, then publish.','warn'); return; }
   const btn=$('#publish'); btn.disabled=true; note('Publishing to the app…');
   try{ const out=live.map(h=>({id:h.id,name:h.name,age:h.age,country:h.country,city:h.city,job:h.job,tz:h.tz,from:h.from,until:h.until,alwaysOn:!!h.alwaysOn,status:h.status,greeting:h.greeting,about:h.about,
       moods:(Array.isArray(h.moods)?h.moods:String(h.moods||'').split(',')).map(s=>String(s).trim()).filter(Boolean),voice:h.voice,accent:h.accent,figure:(h.look||{}).figure||'',photos:(h.photos||[]).map(p=>p&&p.path?p.path:null)}));
     const f=await getFile(cfg.pub,'hosts.json');
     await putFile(cfg.pub,'hosts.json',b64e(JSON.stringify({app:'Qyra',updated:new Date().toISOString(),hosts:out},null,1)),`Publish ${out.length} hosts`,f&&f.sha);
-    data.published=new Date().toISOString(); scheduleSave(true); renderList();
-    note(`Published ${out.length} hosts. The app shows them within a few minutes.`,'ok'); }
+    data.published=new Date().toISOString(); scheduleSave(true); $('#list').innerHTML=''; renderList();
+    note(`Published ${out.length} host${out.length===1?"":"s"}${skipped?` (${skipped} skipped until they have a cover photo)`:''}. The app shows them within a few minutes.`,'ok'); }
   catch(e){ note('Publish failed: '+ghErr(e),'warn'); } btn.disabled=false; }
 async function restore(file){ $('#restore').value=''; if(!file) return;
   try{ let j, zip=null;
@@ -266,11 +280,11 @@ async function restore(file){ $('#restore').value=''; if(!file) return;
         h.photos[i]=await putPhoto(h.id,i,new Blob([await pf.async('arraybuffer')],{type:'image/jpeg'})); pics++; }
       if(!h.prompts) h.prompts=buildPrompts(h);
       const k=data.hosts.findIndex(x=>x.id===h.id); if(k>=0) data.hosts[k]=h; else data.hosts.push(h); done++; }
-    data.hosts.sort((a,b)=>(a.order||99)-(b.order||99)); await save(); renderList();
+    data.hosts.sort((a,b)=>(a.order||999)-(b.order||999)); await save(); $('#list').innerHTML=''; renderList();
     note(`Restored ${done} hosts${pics?` and ${pics} photos`:''}. Tap Publish to show them in the app.`,'ok'); }
   catch(e){ note(e.message==='nozip'?'The zip tool did not load. Reload and try again.':e.message==='shape'||e instanceof SyntaxError?'That file is not a Qyra backup.':'Restore stopped: '+ghErr(e),'warn'); } }
 function route(){ if(!cfg.token) return; const m=location.hash.match(/^#edit-(.+)$/);
-  if(m){ if(!cur||cur.id!==m[1]) openEditor(m[1]); return; } cur=null; renderList(); }
+  if(m){ if(!cur||cur.id!==m[1]) openEditor(m[1]); return; } cur=null; $('#list').innerHTML=''; renderList(); }
 window.addEventListener('hashchange',()=>{ if(cfg.token&&$('#connect').hidden) route(); });
 async function start(){ note('Loading your hosts from GitHub…');
   try{ await load(); $('#who').textContent=`${cfg.owner} · private`; note(''); route(); }
