@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0a0f">
+<meta name="description" content="Qyra: AI hosts from around the world who come online on their own local time.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Qyra</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;1,6..96,500;1,6..96,600&family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: photo-first night app. One column max 720px; 2-col photo grid (3 on wide); profile = full-bleed photo stack + detail panels; chat = single column. */
+:root{
+  --bg:#0d0a0f;--s1:#16111a;--s2:#1f1824;--line:#2d2432;--ink:#f6eff3;--dim:#bcaeb8;--mute:#988a95;
+  --accent:#f09ab0;--accent-ink:#2b0d17;--online:#5edc9f;
+  --display:'Bodoni Moda','Didot','Times New Roman',serif;--sans:'Manrope',system-ui,-apple-system,sans-serif;
+  --r-card:22px;--r-ctl:14px;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font:500 15px/1.5 var(--sans);-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--bg)}
+html.locked,html.locked body{overflow:hidden}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ic{width:20px;height:20px;flex:none}
+.round{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--s1);display:inline-flex;align-items:center;justify-content:center;position:relative;cursor:pointer;flex:none}
+.badge-n{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:800;display:grid;place-items:center}
+.tag{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;border-radius:99px;padding:4px 9px;background:rgba(13,10,15,.66);border:1px solid rgba(255,255,255,.16);color:var(--ink)}
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:8;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid transparent}
+.top .wrap{display:flex;align-items:center;gap:12px;padding-block:12px}
+.logo{font:italic 600 30px/1 var(--display);letter-spacing:-.01em;flex:1}
+.logo span{color:var(--accent)}
+/* search + quick */
+.searchrow{display:flex;gap:10px;padding-block:4px 12px}
+.search{flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:48px;border-radius:var(--r-ctl);background:var(--s1);border:1px solid var(--line);padding:0 14px;color:var(--mute)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font-weight:600;font-size:15px}
+.search input::placeholder{color:var(--mute)}
+.fbtn{height:48px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--s1);padding:0 14px;display:inline-flex;align-items:center;gap:8px;font-weight:700;cursor:pointer;position:relative}
+.fbtn.on{border-color:var(--accent);color:var(--accent)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--s1);border:1px solid var(--line);border-radius:var(--r-ctl);padding:4px;gap:4px}
+.seg button{height:38px;border:0;border-radius:10px;background:none;font-weight:700;font-size:14px;color:var(--dim);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--s2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;padding-top:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 6px 0 12px;border-radius:99px;background:var(--s2);border:1px solid var(--line);font-size:13px;font-weight:700;cursor:pointer}
+.pill i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:var(--dim);font-style:normal}
+.pill.clear{background:none;border-color:transparent;color:var(--accent);padding:0 8px}
+/* online strip */
+.h2row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 12px}
+.h2row h2{margin:0;font:italic 600 24px/1.1 var(--display)}
+.h2row span{color:var(--mute);font-size:13px;font-weight:700}
+.strip{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.strip::-webkit-scrollbar{display:none}
+.bub{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--dim)}
+.ring{width:68px;height:68px;border-radius:50%;padding:3px;background:conic-gradient(var(--online),var(--accent),var(--online))}
+.ring>div{width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;border:2px solid var(--bg)}
+/* grid + cards */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{position:relative;display:block;aspect-ratio:3/4;max-width:100%;border-radius:var(--r-card);overflow:hidden;background:var(--s1);isolation:isolate}
+.card.off .pic{filter:saturate(.6) brightness(.78)}
+.pic{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(120% 90% at 30% 10%,color-mix(in srgb,var(--ac,#f09ab0) 26%,#2a2030),#120e15 72%)}
+.ph b{font:italic 600 58px/1 var(--display);color:rgba(246,239,243,.86);transform:translateY(-14%)}
+.ring .ph b{font-size:26px;transform:none}
+.shade{position:absolute;inset:auto 0 0;height:60%;background:linear-gradient(to top,rgba(10,7,12,.95) 8%,rgba(10,7,12,0));z-index:1;pointer-events:none}
+.card .tag{position:absolute;top:10px;left:10px;z-index:2}
+.live{position:absolute;top:13px;right:13px;z-index:2;width:11px;height:11px;border-radius:50%;background:var(--online);box-shadow:0 0 0 3px rgba(94,220,159,.22)}
+.meta{position:absolute;inset:auto 0 0;z-index:2;padding:12px 13px 13px}
+.meta b{display:block;font:italic 600 22px/1.05 var(--display)}
+.meta small{display:block;font-size:12.5px;font-weight:600;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta .st{color:var(--online)}
+.empty{grid-column:1/-1;background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:28px 18px;text-align:center;color:var(--dim);display:flex;flex-direction:column;gap:12px;align-items:center}
+.btn{height:46px;padding:0 18px;border-radius:var(--r-ctl);border:1px solid var(--line);background:var(--s1);font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.foot{padding-block:30px 44px;color:var(--mute);font-size:12.5px;text-align:center}
+/* filter sheet */
+.scrim{position:fixed;inset:0;z-index:30;background:rgba(5,3,6,.7);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:720px;max-height:88vh;background:var(--s1);border:1px solid var(--line);border-bottom:0;border-radius:24px 24px 0 0;display:flex;flex-direction:column}
+.sheet header{display:flex;align-items:center;justify-content:space-between;padding:16px max(18px,env(safe-area-inset-right,0px)) 10px max(18px,env(safe-area-inset-left,0px))}
+.sheet header h2{margin:0;font:italic 600 26px var(--display)}
+.sbody{overflow-y:auto;padding:4px max(18px,env(safe-area-inset-right,0px)) 10px max(18px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px}
+.fs h3{margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--s2);font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.opt small{color:var(--mute);font-weight:700}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.opt[aria-pressed="true"] small{color:#6d6070}
+.sfoot{display:flex;gap:10px;padding:12px max(18px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));border-top:1px solid var(--line)}
+.sfoot .pri{flex:1}
+/* profile */
+.pf{padding-bottom:116px}
+.hero{position:relative;max-width:720px;margin:0 auto}
+.slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;height:min(74vh,660px)}
+.slides::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:start;position:relative;overflow:hidden;background:var(--s1)}
+.slide .ph b{font-size:120px}
+.bars{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:5px;z-index:3}
+.bars i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3)}.bars i.on{background:#fff}
+.hero .round.back{position:absolute;z-index:3;top:calc(26px + env(safe-area-inset-top,0px));left:max(14px,env(safe-area-inset-left,0px));background:rgba(13,10,15,.6);border-color:rgba(255,255,255,.14)}
+.hero .tag{position:absolute;z-index:3;top:calc(36px + env(safe-area-inset-top,0px));right:max(14px,env(safe-area-inset-right,0px))}
+.hero .shade{height:50%}
+.over{position:absolute;inset:auto 0 0;z-index:2;padding:0 max(18px,env(safe-area-inset-right,0px)) 18px max(18px,env(safe-area-inset-left,0px))}
+.over h1{margin:0;font:italic 600 46px/1 var(--display);letter-spacing:-.01em}
+.over h1 em{font-style:normal;font-weight:600;font-size:32px;color:var(--dim)}
+.over p{margin:8px 0 0;color:var(--dim);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute);display:inline-block}.dot.on{background:var(--online)}
+.panel{display:flex;flex-direction:column;gap:14px;padding-block:18px}
+.quote{margin:0;font:italic 500 21px/1.35 var(--display);color:var(--ink)}
+.box{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-card);padding:16px;display:flex;flex-direction:column;gap:12px}
+.box h3{margin:0;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.box p{margin:0;max-width:62ch;color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.facts div{min-width:0}.facts small{display:block;font-size:12px;font-weight:700;color:var(--mute)}.facts b{display:block;font-weight:700;overflow-wrap:anywhere}
+.moods{display:flex;flex-wrap:wrap;gap:6px}
+.moods span{height:32px;display:inline-flex;align-items:center;padding:0 12px;border-radius:99px;background:var(--s2);border:1px solid var(--line);font-size:13px;font-weight:700}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tog b{display:block}.tog small{color:var(--dim)}
+.sw{width:54px;height:32px;border-radius:99px;border:0;background:var(--s2);box-shadow:inset 0 0 0 1px var(--line);position:relative;cursor:pointer;flex:none}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--mute);transition:left .2s}
+.sw[aria-checked="true"]{background:var(--accent);box-shadow:none}.sw[aria-checked="true"]::after{left:26px;background:#fff}
+.confirm{background:var(--s2);border:1px solid var(--accent);border-radius:var(--r-card);padding:16px;display:flex;flex-direction:column;gap:10px}
+.confirm .row{display:flex;gap:8px;flex-wrap:wrap}
+.dock{position:fixed;inset:auto 0 0;z-index:8;background:linear-gradient(to top,var(--bg) 72%,transparent);padding-top:20px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.dock .wrap{display:flex;gap:10px}
+.dock .btn.pri{flex:1;height:54px;font-size:16px}
+.fav{width:54px;height:54px;border-radius:var(--r-ctl)}
+.fav[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}.fav[aria-pressed="true"] path{fill:var(--accent)}
+/* chat */
+html.chatmode,html.chatmode body,html.chatmode #app{height:100%}
+.ch{display:flex;flex-direction:column;height:100%}
+.ch .top{border-bottom-color:var(--line)}
+.av{width:44px;height:44px;border-radius:50%;overflow:hidden;position:relative;flex:none}
+.av .ph b{font-size:22px;transform:none}
+.who{flex:1;min-width:0}.who b{display:block;font:italic 600 21px/1.1 var(--display)}.who small{font-size:12.5px;font-weight:700;color:var(--dim)}
+.who small.on{color:var(--online)}
+.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-block:16px;width:100%}
+.m{max-width:80%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.45}
+.m.her{align-self:flex-start;background:var(--s1);border:1px solid var(--line);border-bottom-left-radius:6px}
+.m.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);font-weight:600;border-bottom-right-radius:6px}
+.m.sys{align-self:center;max-width:94%;color:var(--mute);font-size:13px;text-align:center;padding:2px 8px}
+.note{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 14px;color:var(--dim);font-size:13.5px;font-weight:600}
+.play{margin-top:8px;height:34px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--s2);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.comp{border-top:1px solid var(--line);background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
+.comp form{display:flex;gap:8px;align-items:center}
+.comp input{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid var(--line);background:var(--s1);padding:0 16px;font-weight:600;outline:0}
+.comp input:focus{border-color:var(--accent)}
+.send{width:48px;height:48px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;cursor:pointer;flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div id="app"></div>
+
+<script>
+const SAMPLE=[{"name": "Aiko", "age": 31, "country": "Japan", "city": "Osaka", "job": "Night-shift nurse", "tz": "Asia/Tokyo", "until": "10:30", "status": "Shift done. Coffee, then you?", "greeting": "Ohayō… well, good morning for me. Long night at the ward. Tell me something nice?", "about": "Calm, dry humour, always asks if you ate. When she is hurt she goes quiet instead of shouting.", "moods": ["calm", "teasing", "quietly hurt"], "voice": "soft and slow, Japanese-accented English", "accent": "#4f6fd8", "from": "07:00", "alwaysOn": false, "photos": [null, null, null], "id": "aiko", "figure": "slim"}, {"name": "Amara", "age": 26, "country": "Nigeria", "city": "Lagos", "job": "Fashion design student", "tz": "Africa/Lagos", "until": "00:00", "status": "Sketching till midnight. Distract me!", "greeting": "Heyyy! Finally someone online. Quick, tell me your favourite colour, I am designing tonight.", "about": "Loud laugh, big opinions, fiercely loyal. Will absolutely tell you when your outfit is wrong.", "moods": ["dramatic", "joyful", "fiery"], "voice": "bright and fast, Nigerian English", "accent": "#e08a1f", "from": "20:00", "alwaysOn": false, "photos": [null, null, null], "id": "amara", "figure": "curvy"}, {"name": "Rosa", "age": 58, "country": "Mexico", "city": "Mexico City", "job": "Retired teacher, runs a bakery", "tz": "America/Mexico_City", "until": "09:30", "status": "Conchas are in the oven. Did you eat?", "greeting": "Buenos días, mijo. Sit, sit. Have you had breakfast or do I need to scold you?", "about": "Warm and bossy in the best way. Scolds you for skipping meals, then tells you a story from her classroom days.", "moods": ["warm", "scolding", "nostalgic"], "voice": "low and warm, Spanish-accented English", "accent": "#c8434f", "from": "06:00", "alwaysOn": false, "photos": [null, null, null], "id": "rosa", "figure": "full"}, {"name": "Priya", "age": 38, "country": "India", "city": "Pune", "job": "Bank branch manager", "tz": "Asia/Kolkata", "until": "00:00", "status": "Branch closed. Now tell me your excuses.", "greeting": "Finally home. Okay, I have ten minutes before dinner. What did you do today, honestly?", "about": "Practical and teasing. Hates excuses, softens fast when you are honest. Remembers every promise you make.", "moods": ["teasing", "annoyed", "caring"], "voice": "clear and quick, Indian English with Hindi", "accent": "#16806a", "from": "21:30", "alwaysOn": false, "photos": [null, null, null], "id": "priya", "figure": "average"}, {"name": "Ingrid", "age": 44, "country": "Norway", "city": "Bergen", "job": "Ferry captain", "tz": "Europe/Oslo", "until": "21:00", "status": "Docked. The fjord was angry today.", "greeting": "Hei. Just tied up the ferry. You can talk, I am listening.", "about": "Blunt, adventurous, unbothered. Short replies at first, then talks for hours about the sea once she trusts you.", "moods": ["blunt", "adventurous", "grumpy"], "voice": "steady and dry, Norwegian accent", "accent": "#2f5bd8", "from": "18:00", "alwaysOn": false, "photos": [null, null, null], "id": "ingrid", "figure": "athletic"}, {"name": "Layla", "age": 29, "country": "Jordan", "city": "Amman", "job": "Architect", "tz": "Asia/Amman", "until": "01:00", "status": "Drawing a building nobody asked for.", "greeting": "Marhaba. I am sketching again. Do you like old houses or glass towers?", "about": "Thoughtful and poetic, stubborn about the things she loves. Sends you sketches of buildings late at night.", "moods": ["dreamy", "stubborn", "gentle"], "voice": "calm and melodic, Arabic-accented English", "accent": "#7a45c2", "from": "21:00", "alwaysOn": false, "photos": [null, null, null], "id": "layla", "figure": "slim"}, {"name": "Carmen", "age": 23, "country": "Brazil", "city": "São Paulo", "job": "Barista and weekend DJ", "tz": "America/Sao_Paulo", "until": "03:00", "status": "Last coffee served. Music on!", "greeting": "Oiii! Café closed, headphones on. Want me to send you a song?", "about": "Playful and impulsive. Cries at every movie and is not embarrassed about it. Sends you songs at 2 am.", "moods": ["playful", "impulsive", "teary"], "voice": "warm and lively, Brazilian Portuguese accent", "accent": "#d6427f", "from": "23:00", "alwaysOn": false, "photos": [null, null, null], "id": "carmen", "figure": "slim"}, {"name": "Maggie", "age": 64, "country": "Ireland", "city": "Dublin", "job": "Retired librarian", "tz": "Europe/Dublin", "until": "18:30", "status": "Tea is brewing. What are you reading?", "greeting": "Hello, love. Kettle is on. Now, what book are you pretending to read this week?", "about": "Gentle storyteller with a sharp wit. Recommends books, remembers what you read, and gets cross if you lie.", "moods": ["gentle", "witty", "cross"], "voice": "soft and lilting, Irish accent", "accent": "#1f7a6d", "from": "15:00", "alwaysOn": false, "photos": [null, null, null], "id": "maggie", "figure": "full"}];
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={ get(k,d){ try{ const v=localStorage.getItem('qyra-'+k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem('qyra-'+k,JSON.stringify(v)); }catch(e){} } };
+const I={ heart:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+  back:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+  search:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  sliders:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
+  close:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  send:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>',
+  sound:'<svg class="ic" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>' };
+const AGES=[['18-24','18–24',18,24],['25-29','25–29',25,29],['30-39','30–39',30,39],['40-49','40–49',40,49],['50+','50+',50,200]];
+const FIGS=[['slim','Slim'],['athletic','Athletic'],['average','Average'],['curvy','Curvy'],['full','Full figure']];
+const SORTS=[['online','Online first'],['young','Youngest'],['old','Oldest'],['az','Name A–Z']];
+let HOSTS=[], favs=store.get('favs',[]), voice=store.get('voice',{}), temp={};
+let F=Object.assign({quick:'all',q:'',ages:[],countries:[],figures:[],sort:'online'},store.get('filters',{}));
+F.q='';
+const saveF=()=>store.set('filters',{quick:F.quick,ages:F.ages,countries:F.countries,figures:F.figures,sort:F.sort});
+function tzNow(tz){ try{ const d=new Date(); const p=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+  return {mins:+p.find(x=>x.type==='hour').value*60+ +p.find(x=>x.type==='minute').value,label:new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit'}).format(d).toLowerCase()}; }catch(e){ return null; } }
+const toMin=s=>{ const [h,m]=String(s||'0:0').split(':').map(Number); return (h||0)*60+(m||0); };
+const clock=s=>{ const m=toMin(s), h=Math.floor(m/60)%24, mm=m%60; return `${h%12||12}${mm?':'+String(mm).padStart(2,'0'):''} ${h<12?'am':'pm'}`; };
+function online(h){ if(h.alwaysOn) return true; const t=tzNow(h.tz); if(!t) return false; let a=toMin(h.from), b=toMin(h.until); if(b<=a) b+=1440; return (t.mins>=a&&t.mins<b)||(t.mins+1440>=a&&t.mins+1440<b); }
+const status=h=>{ const t=tzNow(h.tz); return online(h)?`Online · ${t?t.label+' there':'now'}`:`Back ${clock(h.from)} her time`; };
+const pics=h=>(h.photos||[]).filter(Boolean);
+const pic=(h,i=0)=>{ const p=pics(h)[i]; return p?`<img class="pic" src="${esc(p)}" alt="${esc(h.name)}, photo ${i+1}" loading="lazy">`:`<div class="ph" style="--ac:${esc(h.accent||'#f09ab0')}"><b>${esc((h.name||'?')[0])}</b></div>`; };
+const isFav=id=>favs.includes(id);
+const figName=v=>(FIGS.find(f=>f[0]===v)||[,''])[1];
+function match(h,skip){ const q=F.q.trim().toLowerCase();
+  if(F.quick==='online'&&!online(h)) return false;
+  if(F.quick==='favs'&&!isFav(h.id)) return false;
+  if(q&&![h.name,h.city,h.country,h.job].some(x=>String(x||'').toLowerCase().includes(q))) return false;
+  if(skip!=='ages'&&F.ages.length&&!F.ages.some(k=>{ const a=AGES.find(x=>x[0]===k); return a&&h.age>=a[2]&&h.age<=a[3]; })) return false;
+  if(skip!=='countries'&&F.countries.length&&!F.countries.includes(h.country)) return false;
+  if(skip!=='figures'&&F.figures.length&&!F.figures.includes(h.figure)) return false;
+  return true; }
+function sorted(list){ const by={young:(a,b)=>a.age-b.age,old:(a,b)=>b.age-a.age,az:(a,b)=>a.name.localeCompare(b.name)}[F.sort];
+  return list.slice().sort(by||((a,b)=>(online(b)-online(a))||0)); }
+const nFilters=()=>F.ages.length+F.countries.length+F.figures.length+(F.sort!=='online'?1:0);
+function card(h){ const on=online(h);
+  return `<a class="card ${on?'':'off'}" href="#host-${esc(h.id)}" aria-label="${esc(h.name)}, ${h.age}, ${esc(h.city)}. ${esc(status(h))}">${pic(h)}<div class="shade"></div><span class="tag">AI host</span>${on?'<span class="live"></span>':''}
+    <div class="meta"><b>${esc(h.name)}, ${h.age}</b><small>${esc(h.city)} · ${esc(h.country)}</small><small class="${on?'st':''}">${esc(status(h))}</small></div></a>`; }
+function discover(){ document.documentElement.classList.remove('chatmode');
+  $('#app').innerHTML=`<header class="top"><div class="wrap"><div class="logo" aria-label="Qyra"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;margin-right:6px;vertical-align:-2px;color:var(--accent)"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5L3 8z" fill="currentColor"/></svg>Qyra<span>.</span></div><a class="round" href="#favourites" id="favbtn" aria-label="Favourites">${I.heart}</a></div></header>
+  <main class="wrap">
+    <div class="searchrow"><label class="search"><span class="sr">Search hosts</span>${I.search}<input type="search" id="q" placeholder="Search hosts" value="${esc(F.q)}" autocomplete="off"></label>
+      <button class="fbtn" type="button" id="fopen" aria-haspopup="dialog">${I.sliders}<span>Filters</span></button></div>
+    <div class="seg" role="group" aria-label="Show">${[['all','All hosts'],['online','Online now'],['favs','Favourites']].map(([k,t])=>`<button type="button" data-quick="${k}" aria-pressed="${F.quick===k}">${t}</button>`).join('')}</div>
+    <div class="pills" id="pills"></div>
+    <div id="strip"></div>
+    <div class="h2row"><h2 id="rh">All hosts</h2><span id="rc"></span></div>
+    <div class="grid" id="grid"></div>
+    <p class="foot">Every host on Qyra is an AI character, aged 18+. They are not real people.</p></main>`;
+  $('#q').addEventListener('input',e=>{ F.q=e.target.value; results(); });
+  results(); }
+function results(){ const list=sorted(HOSTS.filter(h=>match(h))), on=list.filter(online);
+  const fb=$('#fbtn')||$('#fopen'); const n=nFilters(); fb.classList.toggle('on',n>0); fb.querySelector('span').textContent=n?`Filters · ${n}`:'Filters';
+  const fv=$('#favbtn'); fv.innerHTML=I.heart+(favs.length?`<span class="badge-n">${favs.length}</span>`:''); fv.setAttribute('aria-label',`Favourites, ${favs.length}`);
+  const P=[...F.ages.map(k=>['ages',k,AGES.find(a=>a[0]===k)[1]]),...F.countries.map(k=>['countries',k,k]),...F.figures.map(k=>['figures',k,figName(k)])];
+  if(F.sort!=='online') P.push(['sort','online',SORTS.find(s=>s[0]===F.sort)[1]]);
+  $('#pills').innerHTML=P.length?P.map(([g,k,t])=>`<button class="pill" type="button" data-rm="${g}" data-k="${esc(k)}" aria-label="Remove ${esc(t)}">${esc(t)}<i>${I.close}</i></button>`).join('')+'<button class="pill clear" type="button" id="clearall">Clear all</button>':'';
+  $('#pills').hidden=!P.length;
+  $('#strip').innerHTML=F.quick!=='online'&&on.length?`<div class="h2row"><h2>Online now</h2><span>${on.length} live</span></div><div class="strip">${on.map(h=>`<a class="bub" href="#host-${esc(h.id)}"><span class="ring"><div>${pic(h)}</div></span>${esc(h.name)}</a>`).join('')}</div>`:'';
+  $('#rh').textContent=F.quick==='online'?'Online now':F.quick==='favs'?'Your favourites':'All hosts';
+  $('#rc').textContent=`${list.length} host${list.length===1?'':'s'}`;
+  $('#grid').innerHTML=list.length?list.map(card).join(''):`<div class="empty"><b style="color:var(--ink)">${F.quick==='favs'&&!favs.length?'No favourites yet':'No hosts match'}</b><span>${F.quick==='favs'&&!favs.length?'Open a profile and tap the heart to keep her here.':'Try fewer filters or a different search.'}</span>${nFilters()||F.q||F.quick!=='all'?'<button class="btn" type="button" id="reset">Show all hosts</button>':''}</div>`; }
+function sheet(){ document.documentElement.classList.add('locked');
+  const sc=document.createElement('div'); sc.className='scrim'; sc.id='scrim'; document.body.appendChild(sc);
+  const countIn=(g,test)=>HOSTS.filter(h=>match(h,g)&&test(h)).length;
+  const draw=()=>{ const countries=[...new Set(HOSTS.map(h=>h.country))].sort(); const total=HOSTS.filter(h=>match(h)).length;
+    const opt=(g,k,t,n)=>`<button class="opt" type="button" data-g="${g}" data-k="${esc(k)}" aria-pressed="${F[g].includes(k)}">${esc(t)}<small>${n}</small></button>`;
+    sc.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><header><h2 id="sh-t">Filters</h2><button class="round" type="button" id="sclose" aria-label="Close filters">${I.close}</button></header>
+      <div class="sbody">
+        <section class="fs"><h3>Age</h3><div class="opts">${AGES.map(a=>opt('ages',a[0],a[1],countIn('ages',h=>h.age>=a[2]&&h.age<=a[3]))).join('')}</div></section>
+        <section class="fs"><h3>Country</h3><div class="opts">${countries.map(c=>opt('countries',c,c,countIn('countries',h=>h.country===c))).join('')}</div></section>
+        <section class="fs"><h3>Figure</h3><div class="opts">${FIGS.map(f=>opt('figures',f[0],f[1],countIn('figures',h=>h.figure===f[0]))).join('')}</div></section>
+        <section class="fs"><h3>Sort by</h3><div class="opts">${SORTS.map(s=>`<button class="opt" type="button" data-sort="${s[0]}" aria-pressed="${F.sort===s[0]}">${s[1]}</button>`).join('')}</div></section>
+      </div>
+      <div class="sfoot"><button class="btn" type="button" id="sclear">Clear</button><button class="btn pri" type="button" id="sdone">Show ${total} host${total===1?'':'s'}</button></div></div>`; };
+  const close=()=>{ sc.remove(); document.documentElement.classList.remove('locked'); saveF(); results(); const b=$('#fopen'); if(b) b.focus(); };
+  sc.addEventListener('click',e=>{ if(e.target===sc||e.target.closest('#sclose,#sdone')) return close();
+    const o=e.target.closest('[data-g]'); if(o){ const g=o.dataset.g, k=o.dataset.k; F[g]=F[g].includes(k)?F[g].filter(x=>x!==k):F[g].concat(k); draw(); return; }
+    const s=e.target.closest('[data-sort]'); if(s){ F.sort=s.dataset.sort; draw(); return; }
+    if(e.target.closest('#sclear')){ F.ages=[];F.countries=[];F.figures=[];F.sort='online'; draw(); } });
+  sc.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
+  draw(); $('#sclose').focus(); }
+function profile(h){ document.documentElement.classList.remove('chatmode'); const ph=pics(h), n=Math.max(1,ph.length), on=online(h), t=tzNow(h.tz), v=!!voice[h.id], fav=isFav(h.id);
+  $('#app').innerHTML=`<div class="pf" style="--ac:${esc(h.accent||'#f09ab0')}"><div class="hero"><div class="slides" id="slides">${Array.from({length:n},(_,i)=>`<div class="slide">${pic(h,i)}</div>`).join('')}</div>
+    ${n>1?`<div class="bars" id="bars">${Array.from({length:n},(_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:''}
+    <a class="round back" href="#" aria-label="Back to all hosts">${I.back}</a><span class="tag">AI host</span><div class="shade"></div>
+    <div class="over"><h1>${esc(h.name)} <em>${h.age}</em></h1><p><span class="dot ${on?'on':''}"></span>${esc(on?status(h):'Offline · back '+clock(h.from)+' her time')}</p></div></div>
+  <div class="wrap panel">
+    <p class="quote">“${esc(h.status)}”</p>
+    <div class="box"><h3>Details</h3><div class="facts">
+      <div><small>Lives in</small><b>${esc(h.city)}, ${esc(h.country)}</b></div><div><small>Works as</small><b>${esc(h.job)}</b></div>
+      <div><small>Her time now</small><b>${esc(t?t.label:'—')}</b></div><div><small>Usually online</small><b>${clock(h.from)} – ${clock(h.until)}</b></div>
+      ${h.figure?`<div><small>Figure</small><b>${esc(figName(h.figure))}</b></div>`:''}<div><small>Voice</small><b>${esc(h.voice)}</b></div></div></div>
+    <div class="box"><h3>About her</h3><p>${esc(h.about)}</p><div class="moods">${(h.moods||[]).map(m=>`<span>${esc(m)}</span>`).join('')}</div></div>
+    <div class="box"><div class="tog"><div><b>Hear her voice</b><small>Her messages get a play button</small></div><button class="sw" type="button" role="switch" id="vsw" aria-checked="${v}" aria-label="Hear her voice"></button></div></div>
+    <div class="box"><h3>Memory</h3><p>${fav?`${esc(h.name)} remembers your chats while she is in your Favourites.`:`Add ${esc(h.name)} to Favourites so she remembers your chats. Otherwise she forgets when you leave.`}</p></div>
+    <div id="cf"></div>
+    <p class="foot">${esc(h.name)} is an AI character, not a real person.</p></div>
+  <div class="dock"><div class="wrap"><button class="round fav" type="button" id="fav" aria-pressed="${fav}" aria-label="${fav?'Remove from':'Add to'} Favourites">${I.heart}</button><a class="btn pri" href="#chat-${esc(h.id)}">Chat with ${esc(h.name)}</a></div></div></div>`;
+  const sl=$('#slides'), bars=$('#bars'); if(bars) sl.addEventListener('scroll',()=>{ const i=Math.round(sl.scrollLeft/sl.clientWidth); [...bars.children].forEach((d,k)=>d.classList.toggle('on',k===i)); },{passive:true});
+  $('#vsw').onclick=()=>{ voice[h.id]=!voice[h.id]; store.set('voice',voice); $('#vsw').setAttribute('aria-checked',!!voice[h.id]); };
+  $('#fav').onclick=()=>{ if(isFav(h.id)){ $('#cf').innerHTML=`<div class="confirm"><b>Remove ${esc(h.name)} from Favourites?</b><span style="color:var(--dim)">She will forget everything you talked about.</span><div class="row"><button class="btn pri" type="button" id="cfy">Remove and forget</button><button class="btn" type="button" id="cfn">Keep her</button></div></div>`;
+      $('#cfy').onclick=()=>{ favs=favs.filter(x=>x!==h.id); store.set('favs',favs); try{ localStorage.removeItem('qyra-chat-'+h.id); }catch(e){} delete temp[h.id]; profile(h); };
+      $('#cfn').onclick=()=>{ $('#cf').innerHTML=''; }; $('#cf').scrollIntoView({behavior:'smooth',block:'center'}); }
+    else { favs.push(h.id); store.set('favs',favs); if(temp[h.id]){ store.set('chat-'+h.id,temp[h.id]); delete temp[h.id]; } profile(h); } }; }
+const getLog=h=>isFav(h.id)?store.get('chat-'+h.id,null):(temp[h.id]||null);
+const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; };
+function speak(text){ try{ const s=window.speechSynthesis; if(!s) return false; s.cancel(); s.speak(new SpeechSynthesisUtterance(text)); return true; }catch(e){ return false; } }
+function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); } const on=online(h), v=!!voice[h.id];
+  $('#app').innerHTML=`<div class="ch" style="--ac:${esc(h.accent||'#f09ab0')}"><header class="top"><div class="wrap"><a class="round" href="#host-${esc(h.id)}" aria-label="Back to ${esc(h.name)}'s profile">${I.back}</a>
+     <div class="av">${pic(h)}</div><div class="who"><b>${esc(h.name)}</b><small class="${on?'on':''}">${esc(status(h))}</small></div><span class="tag">AI host</span></div></header>
+    <div class="msgs wrap" id="msgs" aria-live="polite">
+      ${on?'':`<div class="note">${esc(h.name)} is offline. She is usually online ${clock(h.from)} – ${clock(h.until)} her time.</div>`}
+      ${isFav(h.id)?'':`<div class="m sys">${esc(h.name)} is not in your Favourites, so she forgets this chat when you leave.</div>`}
+      ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}${m.w==='her'&&v?`<br><button class="play" type="button" data-say="${i}">${I.sound}Hear her</button>`:''}</div>`).join('')}</div>
+    <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
+  const M=$('#msgs'); M.scrollTop=M.scrollHeight;
+  M.onclick=e=>{ const b=e.target.closest('[data-say]'); if(b&&!speak(log[+b.dataset.say].t)) b.textContent='Voice is not available on this device'; };
+  $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; log.push({w:'me',t});
+    if(!log.some(m=>m.w==='sys')) log.push({w:'sys',t:`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`});
+    putLog(h,log); chat(h); setTimeout(()=>{ const i=$('#msg'); if(i) i.focus(); },0); }; }
+document.addEventListener('click',e=>{
+  const q=e.target.closest('[data-quick]'); if(q){ F.quick=q.dataset.quick; saveF(); document.querySelectorAll('[data-quick]').forEach(b=>b.setAttribute('aria-pressed',b===q)); results(); return; }
+  const r=e.target.closest('[data-rm]'); if(r){ const g=r.dataset.rm; if(g==='sort') F.sort='online'; else F[g]=F[g].filter(x=>x!==r.dataset.k); saveF(); results(); return; }
+  if(e.target.closest('#clearall,#reset')){ F.ages=[];F.countries=[];F.figures=[];F.sort='online';F.quick='all';F.q=''; saveF(); discover(); return; }
+  if(e.target.closest('#fopen')) sheet(); });
+function route(){ const hs=location.hash.slice(1); let m; document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
+  if(hs==='favourites'){ F.quick='favs'; saveF(); history.replaceState(null,'',location.pathname+location.search); return discover(); }
+  if((m=hs.match(/^host-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h){ window.scrollTo(0,0); return profile(h); } }
+  if((m=hs.match(/^chat-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h) return chat(h); }
+  discover(); }
+window.addEventListener('hashchange',route);
+setInterval(()=>{ if(!location.hash&&!$('#scrim')&&document.activeElement!==$('#q')) results(); },60000);
+(async()=>{ HOSTS=SAMPLE; route();
+  try{ const r=await fetch('hosts.json',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(Array.isArray(j.hosts)&&j.hosts.length){ HOSTS=j.hosts.filter(h=>h.age>=18); route(); } } }catch(e){} })();
+</script>
+
+</body>
+</html>
