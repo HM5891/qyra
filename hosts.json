@@ -1,6 +1,6 @@
 {
  "app": "Qyra",
- "updated": "2026-11-09T16:58:51.217Z",
+ "updated": "2026-11-10T03:54:05.930Z",
  "hosts": [
   {
    "id": "priya",
@@ -12,7 +12,7 @@
    "tz": "Asia/Kolkata",
    "from": "21:30",
    "until": "00:00",
-   "alwaysOn": false,
+   "alwaysOn": true,
    "status": "Branch closed. Now tell me your excuses.",
    "greeting": "Finally home. Okay, I have ten minutes before dinner. What did you do today, honestly?",
    "about": "Practical and teasing. Hates excuses, softens fast when you are honest. Remembers every promise you make.",
