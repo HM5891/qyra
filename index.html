@@ -8,7 +8,18 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.gate{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 22px;background:radial-gradient(120% 70% at 50% 0%,rgba(240,154,176,.16),transparent 60%)}
+.gate .in{max-width:380px;width:100%;display:flex;flex-direction:column;gap:18px;text-align:center}
+.gate .crown{width:54px;height:54px;margin:0 auto;color:var(--accent)}
+.gate h1{font:italic 600 44px/1 var(--display);margin:0}.gate h1 span{color:var(--accent)}
+.gate p{margin:0;color:var(--mute)}
+.gate .age{display:inline-block;margin:0 auto;padding:6px 14px;border:1px solid var(--accent);color:var(--accent);border-radius:99px;font-weight:800;letter-spacing:.08em;font-size:13px}
+.gate .btn{width:100%;height:54px;font-size:16px}
+.bond{display:flex;align-items:center;gap:10px}.bond .hs{display:flex;gap:3px;color:var(--accent)}.bond .hs svg{width:18px;height:18px}.bond .hs .off{opacity:.22}
+.bond b{font-size:16px}.bond small{display:block;color:var(--mute)}
+.bar{height:6px;border-radius:9px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--accent);border-radius:9px}
+.lvl{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--accent)}
+</style>
 </head>
 <body>
 <title>Qyra</title>
@@ -262,6 +273,7 @@ function profile(h){ document.documentElement.classList.remove('chatmode'); cons
       ${h.figure?`<div><small>Figure</small><b>${esc(figName(h.figure))}</b></div>`:''}<div><small>Voice</small><b>${esc(h.voice)}</b></div></div></div>
     <div class="box"><h3>About her</h3><p>${esc(h.about)}</p><div class="moods">${(h.moods||[]).map(m=>`<span>${esc(m)}</span>`).join('')}</div></div>
     <div class="box"><div class="tog"><div><b>Hear her voice</b><small>Her replies are read aloud automatically</small></div><button class="sw" type="button" role="switch" id="vsw" aria-checked="${v}" aria-label="Hear her voice"></button></div></div>
+    ${(()=>{ const B=bondOf(h.id); return `<div class="box"><h3>Your bond</h3><div class="bond">${heartsHtml(B.lv)}<div><b>${esc(B.name)}</b><small>${B.next?`Keep talking to reach ${esc(B.next)}`:`She's yours`}</small></div></div>${B.next?`<div class="bar"><i style="width:${Math.round(B.pr*100)}%"></i></div>`:''}</div>`; })()}
     <div class="box"><h3>Memory</h3><p>${fav?`${esc(h.name)} remembers your chats while she is in your Favourites.`:`Add ${esc(h.name)} to Favourites so she remembers your chats. Otherwise she forgets when you leave.`}</p></div>
     <div id="cf"></div>
     <p class="foot">${esc(h.name)} is an AI character, not a real person.</p></div>
@@ -273,7 +285,7 @@ function profile(h){ document.documentElement.classList.remove('chatmode'); cons
       $('#cfn').onclick=()=>{ $('#cf').innerHTML=''; }; $('#cf').scrollIntoView({behavior:'smooth',block:'center'}); }
     else { favs.push(h.id); store.set('favs',favs); if(temp[h.id]){ store.set('chat-'+h.id,temp[h.id]); delete temp[h.id]; } profile(h); } }; }
 const getLog=h=>isFav(h.id)?store.get('chat-'+h.id,null):(temp[h.id]||null);
-const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; };
+const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; seen[h.id]=Date.now(); store.set('seen',seen); };
 const EN_ACCENT={India:'en-IN','United Kingdom':'en-GB',UK:'en-GB',England:'en-GB',Ireland:'en-IE',Australia:'en-AU','New Zealand':'en-NZ',Nigeria:'en-NG','South Africa':'en-ZA',Kenya:'en-KE',Ghana:'en-GH',Philippines:'en-PH',Singapore:'en-SG',Canada:'en-CA'};
 function voiceLang(h,text){ const s=String(text);
   if(/[\u0900-\u097F]/.test(s)) return 'hi-IN'; if(/[\u3040-\u30FF]/.test(s)) return 'ja-JP'; if(/[\uAC00-\uD7AF]/.test(s)) return 'ko-KR';
@@ -293,18 +305,22 @@ const device=(()=>{ let d=store.get('device',''); if(!d){ d=(window.crypto&&cryp
 const lastReal=log=>{ for(let i=log.length-1;i>=0;i--) if(log[i].w!=='sys') return log[i]; return null; };
 function sysOnce(log,t){ const l=log[log.length-1]; if(!l||l.t!==t) log.push({w:'sys',t}); }
 const rerender=h=>{ if(location.hash==='#chat-'+h.id) chat(h); };
-async function askReply(h){ if(!AI_URL||busy[h.id]) return; let log=getLog(h); const lr=log&&lastReal(log); if(!lr||lr.w!=='me') return;
+async function askReply(h,away){ const opener=away>0; if(!AI_URL||busy[h.id]) return; let log=getLog(h); const lr=log&&lastReal(log); if(!lr||(!opener&&lr.w!=='me')) return;
   busy[h.id]=true; rerender(h); const t0=Date.now(); let reply=null, err='';
-  try{ const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostId:h.id,device,history:log.filter(m=>m.w!=='sys').slice(-24)})});
+  try{ const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostId:h.id,device,history:log.filter(m=>m.w!=='sys').slice(-24),bond:bondOf(h.id).lv,others:rivals(h.id),...(opener?{opener:true,awayHours:away}:{})})});
     const j=await r.json().catch(()=>({})); if(r.ok&&j.reply) reply=String(j.reply); else err=j.error||'ai'; }catch(e){ err='offline'; }
   const feel=Math.min(2600,700+(reply?reply.length*22:0)); await new Promise(r=>setTimeout(r,Math.max(0,feel-(Date.now()-t0))));
   busy[h.id]=false; log=getLog(h)||log;
   if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; if(voice[h.id]&&location.hash==='#chat-'+h.id) speak(reply,h); }
+  else if(opener){ failed[h.id]=Date.now(); }
   else { failed[h.id]=Date.now(); sysOnce(log,err==='daily_limit'?"You've used today's free replies. Hosts can chat with you again tomorrow."
     :err==='busy'?`${h.name} is getting lots of messages. Send again in a minute.`
     :err==='offline'?`Couldn't reach ${h.name}. Check your internet, then send again.`:`${h.name} couldn't reply just now. Send your message again.`); }
   putLog(h,log); rerender(h); }
-function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); if(voice[h.id]) setTimeout(()=>speak(h.greeting,h),300); }
+let seen=store.get('seen',{}), due={};
+function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h);
+  const now=Date.now(), last=seen[h.id]||0, awayH=(now-last)/36e5;
+  if(location.hash==='#chat-'+h.id&&!busy[h.id]&&awayH>=0.1){ if(last>0&&awayH>=4&&log&&log.some(m=>m.w==='me')) due[h.id]=awayH; seen[h.id]=now; store.set('seen',seen); } if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); if(voice[h.id]) setTimeout(()=>speak(h.greeting,h),300); }
   if(AI_URL&&log.some(m=>m.w==='sys'&&/switch on once/.test(m.t))){ log=log.filter(m=>!(m.w==='sys'&&/switch on once/.test(m.t))); putLog(h,log); }
   const on=online(h), v=!!voice[h.id], keep=$('#msg')?$('#msg').value:'', typing=!!busy[h.id];
   $('#app').innerHTML=`<div class="ch" style="--ac:${esc(h.accent||'#f09ab0')}"><header class="top"><div class="wrap"><a class="round" href="#host-${esc(h.id)}" aria-label="Back to ${esc(h.name)}'s profile">${I.back}</a>
@@ -316,17 +332,34 @@ function chat(h){ document.documentElement.classList.add('chatmode'); let log=ge
       ${typing?'<div class="m her typing" aria-label="typing"><i></i><i></i><i></i></div>':''}</div>
     <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
   const M=$('#msgs'); M.scrollTop=M.scrollHeight; if(keep) $('#msg').value=keep;
-  $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; const L=getLog(h)||log; L.push({w:'me',t}); delete failed[h.id];
+  $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; const L=getLog(h)||log; L.push({w:'me',t}); delete failed[h.id]; bumpBond(h.id);
     if(!AI_URL) sysOnce(L,`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`);
     else if(!online(h)) sysOnce(L,`${h.name} is offline right now. She'll reply when she's back, around ${clock(h.from)} her time.`);
     putLog(h,L); $('#msg').value=''; chat(h); setTimeout(()=>{ const i=$('#msg'); if(i) i.focus(); },0); };
-  if(AI_URL&&on&&!typing&&!(failed[h.id]&&Date.now()-failed[h.id]<60000)){ const lr=lastReal(log); if(lr&&lr.w==='me') setTimeout(()=>askReply(h),0); } }
+  if(AI_URL&&on&&!typing&&!(failed[h.id]&&Date.now()-failed[h.id]<60000)){ const lr=lastReal(log); if(lr&&lr.w==='me') setTimeout(()=>askReply(h),0); else if(due[h.id]&&lr){ const a=due[h.id]; delete due[h.id]; setTimeout(()=>askReply(h,a),600); } } }
 document.addEventListener('click',e=>{
   const q=e.target.closest('[data-quick]'); if(q){ F.quick=q.dataset.quick; saveF(); document.querySelectorAll('[data-quick]').forEach(b=>b.setAttribute('aria-pressed',b===q)); results(); return; }
   const r=e.target.closest('[data-rm]'); if(r){ const g=r.dataset.rm; if(g==='sort') F.sort='online'; else F[g]=F[g].filter(x=>x!==r.dataset.k); saveF(); results(); return; }
   if(e.target.closest('#clearall,#reset')){ F.ages=[];F.countries=[];F.figures=[];F.sort='online';F.quick='all';F.q=''; saveF(); discover(); return; }
   if(e.target.closest('#fopen')) sheet(); });
-function route(){ const hs=location.hash.slice(1); let m; if(!/^chat-/.test(hs)) stopVoice(); document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
+
+const BONDS=[['Strangers',0,0],['Getting to know',8,1],['Close',30,2],['Crush',80,3],['In love',160,5]];
+const bondData=id=>{ const b=store.get('bond',{}); return b[id]||{n:0,d:[]}; };
+function bondOf(id){ const b=bondData(id); let lv=0; BONDS.forEach((x,i)=>{ if(b.n>=x[1]&&b.d.length>=x[2]) lv=i; });
+  const nx=BONDS[lv+1]; const pr=nx?Math.min(1,Math.min(b.n/nx[1],nx[2]?b.d.length/nx[2]:1)):1; return {lv:lv+1,name:BONDS[lv][0],pr,next:nx&&nx[0]}; }
+function bumpBond(id){ const all=store.get('bond',{}); const b=all[id]||{n:0,d:[]}; b.n++; const day=new Date().toISOString().slice(0,10);
+  if(!b.d.includes(day)) b.d=[...b.d,day].slice(-30); b.t=Date.now(); all[id]=b; store.set('bond',all); }
+function rivals(id){ const all=store.get('bond',{}), cut=Date.now()-36*36e5;
+  return Object.keys(all).filter(k=>k!==id&&all[k].t>cut).sort((a,b)=>all[b].t-all[a].t).slice(0,3).map(k=>{ const x=HOSTS.find(h=>h.id===k); return x&&x.name; }).filter(Boolean); }
+const heartsHtml=lv=>`<span class="hs" aria-hidden="true">${[1,2,3,4,5].map(i=>`<svg viewBox="0 0 24 24" class="${i<=lv?'':'off'}"><path fill="currentColor" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.5 1.1 4.3 2.4.8-1.3 2.2-2.4 4.3-2.4 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg>`).join('')}</span>`;
+function gate(){ document.documentElement.classList.remove('chatmode');
+  $('#app').innerHTML=`<div class="gate"><div class="in"><svg class="crown" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5L3 8z" fill="currentColor"/></svg>
+    <h1>Qyra<span>.</span></h1><span class="age">18+ ONLY</span>
+    <p>Qyra is for adults. Its AI hosts flirt, tease and talk about love and relationships. They are AI characters, not real people.</p>
+    <button class="btn pri" type="button" id="g-yes">I'm 18 or older, enter</button><button class="btn" type="button" id="g-no">I'm under 18</button></div></div>`;
+  $('#g-yes').onclick=()=>{ store.set('adult',Date.now()); route(); };
+  $('#g-no').onclick=()=>{ $('#app').innerHTML=`<div class="gate"><div class="in"><h1>Qyra<span>.</span></h1><p>Sorry, Qyra is only for adults. Please close the app.</p></div></div>`; }; }
+function route(){ const hs=location.hash.slice(1); let m; if(!store.get('adult',0)) return gate(); if(!/^chat-/.test(hs)) stopVoice(); document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
   if(hs==='favourites'){ F.quick='favs'; saveF(); history.replaceState(null,'',location.pathname+location.search); return discover(); }
   if((m=hs.match(/^host-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h){ window.scrollTo(0,0); return profile(h); } }
   if((m=hs.match(/^chat-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h) return chat(h); }
