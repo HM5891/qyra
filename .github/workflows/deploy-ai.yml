@@ -37,9 +37,9 @@ jobs:
           cat /tmp/out.txt; echo
           if [ "$code" -ge 300 ]; then echo "::warning::Could not run the SQL automatically (HTTP $code). Paste supabase/qyra_usage.sql into Supabase SQL Editor once."; exit 1; fi
       - name: Save the Groq key on Supabase
-        run: supabase secrets set GROQ_API_KEY="$GROQ" --project-ref "$REF"
+        run: supabase secrets set GROQ_API_KEY="$GROQ" --project-ref "$REF" --yes
       - name: Deploy the chat function
-        run: supabase functions deploy qyra-chat --project-ref "$REF" --no-verify-jwt
+        run: supabase functions deploy qyra-chat --project-ref "$REF" --no-verify-jwt --use-api --yes
       - name: Tell the app where the AI is
         run: |
           printf '{"aiUrl":"https://%s.supabase.co/functions/v1/qyra-chat"}\n' "$REF" > qyra-config.json
