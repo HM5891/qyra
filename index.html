@@ -149,6 +149,8 @@ html.chatmode,html.chatmode body,html.chatmode #app{height:100%}
 .m.sys{align-self:center;max-width:94%;color:var(--mute);font-size:13px;text-align:center;padding:2px 8px}
 .note{background:var(--s1);border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px 14px;color:var(--dim);font-size:13.5px;font-weight:600}
 .play{margin-top:8px;height:34px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--s2);font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.m.typing{display:inline-flex;gap:5px;align-items:center;padding:14px 16px}.m.typing i{width:7px;height:7px;border-radius:50%;background:var(--dim);animation:tp 1.1s infinite}.m.typing i:nth-child(2){animation-delay:.18s}.m.typing i:nth-child(3){animation-delay:.36s}
+@keyframes tp{0%,60%,100%{opacity:.3;transform:none}30%{opacity:1;transform:translateY(-3px)}}
 .comp{border-top:1px solid var(--line);background:var(--bg);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
 .comp form{display:flex;gap:8px;align-items:center}
 .comp input{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid var(--line);background:var(--s1);padding:0 16px;font-weight:600;outline:0}
@@ -273,19 +275,40 @@ function profile(h){ document.documentElement.classList.remove('chatmode'); cons
 const getLog=h=>isFav(h.id)?store.get('chat-'+h.id,null):(temp[h.id]||null);
 const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; };
 function speak(text){ try{ const s=window.speechSynthesis; if(!s) return false; s.cancel(); s.speak(new SpeechSynthesisUtterance(text)); return true; }catch(e){ return false; } }
-function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); } const on=online(h), v=!!voice[h.id];
+let AI_URL='', busy={}, failed={};
+const device=(()=>{ let d=store.get('device',''); if(!d){ d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36); store.set('device',d); } return d; })();
+const lastReal=log=>{ for(let i=log.length-1;i>=0;i--) if(log[i].w!=='sys') return log[i]; return null; };
+function sysOnce(log,t){ const l=log[log.length-1]; if(!l||l.t!==t) log.push({w:'sys',t}); }
+const rerender=h=>{ if(location.hash==='#chat-'+h.id) chat(h); };
+async function askReply(h){ if(!AI_URL||busy[h.id]) return; let log=getLog(h); const lr=log&&lastReal(log); if(!lr||lr.w!=='me') return;
+  busy[h.id]=true; rerender(h); const t0=Date.now(); let reply=null, err='';
+  try{ const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostId:h.id,device,history:log.filter(m=>m.w!=='sys').slice(-24)})});
+    const j=await r.json().catch(()=>({})); if(r.ok&&j.reply) reply=String(j.reply); else err=j.error||'ai'; }catch(e){ err='offline'; }
+  const feel=Math.min(2600,700+(reply?reply.length*22:0)); await new Promise(r=>setTimeout(r,Math.max(0,feel-(Date.now()-t0))));
+  busy[h.id]=false; log=getLog(h)||log;
+  if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; }
+  else { failed[h.id]=Date.now(); sysOnce(log,err==='daily_limit'?"You've used today's free replies. Hosts can chat with you again tomorrow."
+    :err==='busy'?`${h.name} is getting lots of messages. Send again in a minute.`
+    :err==='offline'?`Couldn't reach ${h.name}. Check your internet, then send again.`:`${h.name} couldn't reply just now. Send your message again.`); }
+  putLog(h,log); rerender(h); }
+function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); }
+  if(AI_URL&&log.some(m=>m.w==='sys'&&/switch on once/.test(m.t))){ log=log.filter(m=>!(m.w==='sys'&&/switch on once/.test(m.t))); putLog(h,log); }
+  const on=online(h), v=!!voice[h.id], keep=$('#msg')?$('#msg').value:'', typing=!!busy[h.id];
   $('#app').innerHTML=`<div class="ch" style="--ac:${esc(h.accent||'#f09ab0')}"><header class="top"><div class="wrap"><a class="round" href="#host-${esc(h.id)}" aria-label="Back to ${esc(h.name)}'s profile">${I.back}</a>
-     <div class="av">${pic(h)}</div><div class="who"><b>${esc(h.name)}</b><small class="${on?'on':''}">${esc(status(h))}</small></div><span class="tag">AI host</span></div></header>
+     <div class="av">${pic(h)}</div><div class="who"><b>${esc(h.name)}</b><small class="${on||typing?'on':''}">${typing?'typing…':esc(status(h))}</small></div><span class="tag">AI host</span></div></header>
     <div class="msgs wrap" id="msgs" aria-live="polite">
-      ${on?'':`<div class="note">${esc(h.name)} is offline. She is usually online ${clock(h.from)} – ${clock(h.until)} her time.</div>`}
+      ${on?'':`<div class="note">${esc(h.name)} is offline. She is usually online ${clock(h.from)} – ${clock(h.until)} her time, and replies when she's back.</div>`}
       ${isFav(h.id)?'':`<div class="m sys">${esc(h.name)} is not in your Favourites, so she forgets this chat when you leave.</div>`}
-      ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}${m.w==='her'&&v?`<br><button class="play" type="button" data-say="${i}">${I.sound}Hear her</button>`:''}</div>`).join('')}</div>
-    <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
-  const M=$('#msgs'); M.scrollTop=M.scrollHeight;
+      ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}${m.w==='her'&&v?`<br><button class="play" type="button" data-say="${i}">${I.sound}Hear her</button>`:''}</div>`).join('')}
+      ${typing?'<div class="m her typing" aria-label="typing"><i></i><i></i><i></i></div>':''}</div>
+    <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
+  const M=$('#msgs'); M.scrollTop=M.scrollHeight; if(keep) $('#msg').value=keep;
   M.onclick=e=>{ const b=e.target.closest('[data-say]'); if(b&&!speak(log[+b.dataset.say].t)) b.textContent='Voice is not available on this device'; };
-  $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; log.push({w:'me',t});
-    if(!log.some(m=>m.w==='sys')) log.push({w:'sys',t:`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`});
-    putLog(h,log); chat(h); setTimeout(()=>{ const i=$('#msg'); if(i) i.focus(); },0); }; }
+  $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; const L=getLog(h)||log; L.push({w:'me',t}); delete failed[h.id];
+    if(!AI_URL) sysOnce(L,`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`);
+    else if(!online(h)) sysOnce(L,`${h.name} is offline right now. She'll reply when she's back, around ${clock(h.from)} her time.`);
+    putLog(h,L); $('#msg').value=''; chat(h); setTimeout(()=>{ const i=$('#msg'); if(i) i.focus(); },0); };
+  if(AI_URL&&on&&!typing&&!(failed[h.id]&&Date.now()-failed[h.id]<60000)){ const lr=lastReal(log); if(lr&&lr.w==='me') setTimeout(()=>askReply(h),0); } }
 document.addEventListener('click',e=>{
   const q=e.target.closest('[data-quick]'); if(q){ F.quick=q.dataset.quick; saveF(); document.querySelectorAll('[data-quick]').forEach(b=>b.setAttribute('aria-pressed',b===q)); results(); return; }
   const r=e.target.closest('[data-rm]'); if(r){ const g=r.dataset.rm; if(g==='sort') F.sort='online'; else F[g]=F[g].filter(x=>x!==r.dataset.k); saveF(); results(); return; }
@@ -299,6 +322,7 @@ function route(){ const hs=location.hash.slice(1); let m; document.documentEleme
 window.addEventListener('hashchange',route);
 setInterval(()=>{ if(!location.hash&&!$('#scrim')&&document.activeElement!==$('#q')) results(); },60000);
 (async()=>{ HOSTS=SAMPLE; route();
+  try{ const c=await fetch('qyra-config.json',{cache:'no-store'}); if(c.ok){ const j=await c.json(); if(j&&typeof j.aiUrl==='string'&&/^https:\/\//.test(j.aiUrl)) AI_URL=j.aiUrl; } }catch(e){}
   try{ const r=await fetch('hosts.json',{cache:'no-store'}); if(r.ok){ const j=await r.json(); if(Array.isArray(j.hosts)&&j.hosts.length){ HOSTS=j.hosts.filter(h=>h.age>=18); route(); } } }catch(e){} })();
 </script>
 
