@@ -1,7 +1,9 @@
 // Qyra (user app): a full-screen window onto https://hm5891.github.io/qyra/
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 const appUrl = 'https://hm5891.github.io/qyra/';
 const bg = Color(0xFF0D0A0F);
@@ -23,13 +25,49 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   late final WebViewController c;
   bool offline = false;
+  final tts = FlutterTts();
+  String? lastLang;
+
+  Future<void> say(String text, String lang) async {
+    try {
+      await tts.stop();
+      if (lang != lastLang) {
+        var ok = await tts.isLanguageAvailable(lang);
+        if (ok != true && lang.startsWith('en-')) {
+          lang = 'en-US';
+          ok = true;
+        }
+        if (ok == true) await tts.setLanguage(lang);
+        lastLang = lang;
+      }
+      await tts.speak(text);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    tts.stop();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    tts.setSpeechRate(0.48);
+    tts.setPitch(1.1);
     c = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(bg)
+      ..addJavaScriptChannel('QyraVoice', onMessageReceived: (m) {
+        try {
+          final d = jsonDecode(m.message);
+          if (d is Map && d['stop'] == true) {
+            tts.stop();
+          } else if (d is Map && d['say'] is String) {
+            say(d['say'] as String, (d['lang'] as String?) ?? 'en-US');
+          }
+        } catch (_) {}
+      })
       ..setNavigationDelegate(NavigationDelegate(
         onWebResourceError: (e) {
           if (e.isForMainFrame ?? true) setState(() => offline = true);

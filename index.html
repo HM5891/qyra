@@ -261,20 +261,33 @@ function profile(h){ document.documentElement.classList.remove('chatmode'); cons
       <div><small>Her time now</small><b>${esc(t?t.label:'—')}</b></div><div><small>Usually online</small><b>${clock(h.from)} – ${clock(h.until)}</b></div>
       ${h.figure?`<div><small>Figure</small><b>${esc(figName(h.figure))}</b></div>`:''}<div><small>Voice</small><b>${esc(h.voice)}</b></div></div></div>
     <div class="box"><h3>About her</h3><p>${esc(h.about)}</p><div class="moods">${(h.moods||[]).map(m=>`<span>${esc(m)}</span>`).join('')}</div></div>
-    <div class="box"><div class="tog"><div><b>Hear her voice</b><small>Her messages get a play button</small></div><button class="sw" type="button" role="switch" id="vsw" aria-checked="${v}" aria-label="Hear her voice"></button></div></div>
+    <div class="box"><div class="tog"><div><b>Hear her voice</b><small>Her replies are read aloud automatically</small></div><button class="sw" type="button" role="switch" id="vsw" aria-checked="${v}" aria-label="Hear her voice"></button></div></div>
     <div class="box"><h3>Memory</h3><p>${fav?`${esc(h.name)} remembers your chats while she is in your Favourites.`:`Add ${esc(h.name)} to Favourites so she remembers your chats. Otherwise she forgets when you leave.`}</p></div>
     <div id="cf"></div>
     <p class="foot">${esc(h.name)} is an AI character, not a real person.</p></div>
   <div class="dock"><div class="wrap"><button class="round fav" type="button" id="fav" aria-pressed="${fav}" aria-label="${fav?'Remove from':'Add to'} Favourites">${I.heart}</button><a class="btn pri" href="#chat-${esc(h.id)}">Chat with ${esc(h.name)}</a></div></div></div>`;
   const sl=$('#slides'), bars=$('#bars'); if(bars) sl.addEventListener('scroll',()=>{ const i=Math.round(sl.scrollLeft/sl.clientWidth); [...bars.children].forEach((d,k)=>d.classList.toggle('on',k===i)); },{passive:true});
-  $('#vsw').onclick=()=>{ voice[h.id]=!voice[h.id]; store.set('voice',voice); $('#vsw').setAttribute('aria-checked',!!voice[h.id]); };
+  $('#vsw').onclick=()=>{ voice[h.id]=!voice[h.id]; store.set('voice',voice); if(!voice[h.id]) stopVoice(); $('#vsw').setAttribute('aria-checked',!!voice[h.id]); };
   $('#fav').onclick=()=>{ if(isFav(h.id)){ $('#cf').innerHTML=`<div class="confirm"><b>Remove ${esc(h.name)} from Favourites?</b><span style="color:var(--dim)">She will forget everything you talked about.</span><div class="row"><button class="btn pri" type="button" id="cfy">Remove and forget</button><button class="btn" type="button" id="cfn">Keep her</button></div></div>`;
       $('#cfy').onclick=()=>{ favs=favs.filter(x=>x!==h.id); store.set('favs',favs); try{ localStorage.removeItem('qyra-chat-'+h.id); }catch(e){} delete temp[h.id]; profile(h); };
       $('#cfn').onclick=()=>{ $('#cf').innerHTML=''; }; $('#cf').scrollIntoView({behavior:'smooth',block:'center'}); }
     else { favs.push(h.id); store.set('favs',favs); if(temp[h.id]){ store.set('chat-'+h.id,temp[h.id]); delete temp[h.id]; } profile(h); } }; }
 const getLog=h=>isFav(h.id)?store.get('chat-'+h.id,null):(temp[h.id]||null);
 const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; };
-function speak(text){ try{ const s=window.speechSynthesis; if(!s) return false; s.cancel(); s.speak(new SpeechSynthesisUtterance(text)); return true; }catch(e){ return false; } }
+const EN_ACCENT={India:'en-IN','United Kingdom':'en-GB',UK:'en-GB',England:'en-GB',Ireland:'en-IE',Australia:'en-AU','New Zealand':'en-NZ',Nigeria:'en-NG','South Africa':'en-ZA',Kenya:'en-KE',Ghana:'en-GH',Philippines:'en-PH',Singapore:'en-SG',Canada:'en-CA'};
+function voiceLang(h,text){ const s=String(text);
+  if(/[\u0900-\u097F]/.test(s)) return 'hi-IN'; if(/[\u3040-\u30FF]/.test(s)) return 'ja-JP'; if(/[\uAC00-\uD7AF]/.test(s)) return 'ko-KR';
+  if(/[\u4E00-\u9FFF]/.test(s)) return 'zh-CN'; if(/[\u0600-\u06FF]/.test(s)) return 'ar'; if(/[\u0400-\u04FF]/.test(s)) return 'ru-RU';
+  if(/[\u0E00-\u0E7F]/.test(s)) return 'th-TH'; if(/[\u0980-\u09FF]/.test(s)) return 'bn-IN'; if(/[\u0B80-\u0BFF]/.test(s)) return 'ta-IN';
+  return EN_ACCENT[h&&h.country]||'en-US'; }
+const sayable=t=>String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu,'').replace(/\*+/g,'').trim();
+function stopVoice(){ try{ if(window.QyraVoice&&QyraVoice.postMessage) QyraVoice.postMessage(JSON.stringify({stop:true})); else if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} }
+function speak(text,h){ const t=sayable(text); if(!t) return false; const lang=voiceLang(h,t);
+  try{ if(window.QyraVoice&&QyraVoice.postMessage){ QyraVoice.postMessage(JSON.stringify({say:t,lang})); return true; }
+    const s=window.speechSynthesis; if(!s) return false; s.cancel(); const u=new SpeechSynthesisUtterance(t); u.lang=lang; u.pitch=1.1;
+    const vs=s.getVoices().filter(v=>v.lang&&v.lang.replace('_','-').toLowerCase().startsWith(lang.toLowerCase().slice(0,2)));
+    const fem=vs.find(v=>/female|woman|samantha|victoria|karen|moira|tessa|veena|zira|susan|heera|google (uk english female|us english)/i.test(v.name))||vs.find(v=>v.lang.replace('_','-').toLowerCase()===lang.toLowerCase())||vs[0];
+    if(fem) u.voice=fem; s.speak(u); return true; }catch(e){ return false; } }
 let AI_URL='', busy={}, failed={};
 const device=(()=>{ let d=store.get('device',''); if(!d){ d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36); store.set('device',d); } return d; })();
 const lastReal=log=>{ for(let i=log.length-1;i>=0;i--) if(log[i].w!=='sys') return log[i]; return null; };
@@ -286,12 +299,12 @@ async function askReply(h){ if(!AI_URL||busy[h.id]) return; let log=getLog(h); c
     const j=await r.json().catch(()=>({})); if(r.ok&&j.reply) reply=String(j.reply); else err=j.error||'ai'; }catch(e){ err='offline'; }
   const feel=Math.min(2600,700+(reply?reply.length*22:0)); await new Promise(r=>setTimeout(r,Math.max(0,feel-(Date.now()-t0))));
   busy[h.id]=false; log=getLog(h)||log;
-  if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; }
+  if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; if(voice[h.id]&&location.hash==='#chat-'+h.id) speak(reply,h); }
   else { failed[h.id]=Date.now(); sysOnce(log,err==='daily_limit'?"You've used today's free replies. Hosts can chat with you again tomorrow."
     :err==='busy'?`${h.name} is getting lots of messages. Send again in a minute.`
     :err==='offline'?`Couldn't reach ${h.name}. Check your internet, then send again.`:`${h.name} couldn't reply just now. Send your message again.`); }
   putLog(h,log); rerender(h); }
-function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); }
+function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h); if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); if(voice[h.id]) setTimeout(()=>speak(h.greeting,h),300); }
   if(AI_URL&&log.some(m=>m.w==='sys'&&/switch on once/.test(m.t))){ log=log.filter(m=>!(m.w==='sys'&&/switch on once/.test(m.t))); putLog(h,log); }
   const on=online(h), v=!!voice[h.id], keep=$('#msg')?$('#msg').value:'', typing=!!busy[h.id];
   $('#app').innerHTML=`<div class="ch" style="--ac:${esc(h.accent||'#f09ab0')}"><header class="top"><div class="wrap"><a class="round" href="#host-${esc(h.id)}" aria-label="Back to ${esc(h.name)}'s profile">${I.back}</a>
@@ -299,11 +312,10 @@ function chat(h){ document.documentElement.classList.add('chatmode'); let log=ge
     <div class="msgs wrap" id="msgs" aria-live="polite">
       ${on?'':`<div class="note">${esc(h.name)} is offline. She is usually online ${clock(h.from)} – ${clock(h.until)} her time, and replies when she's back.</div>`}
       ${isFav(h.id)?'':`<div class="m sys">${esc(h.name)} is not in your Favourites, so she forgets this chat when you leave.</div>`}
-      ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}${m.w==='her'&&v?`<br><button class="play" type="button" data-say="${i}">${I.sound}Hear her</button>`:''}</div>`).join('')}
+      ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}</div>`).join('')}
       ${typing?'<div class="m her typing" aria-label="typing"><i></i><i></i><i></i></div>':''}</div>
     <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
   const M=$('#msgs'); M.scrollTop=M.scrollHeight; if(keep) $('#msg').value=keep;
-  M.onclick=e=>{ const b=e.target.closest('[data-say]'); if(b&&!speak(log[+b.dataset.say].t)) b.textContent='Voice is not available on this device'; };
   $('#f').onsubmit=e=>{ e.preventDefault(); const t=$('#msg').value.trim(); if(!t) return; const L=getLog(h)||log; L.push({w:'me',t}); delete failed[h.id];
     if(!AI_URL) sysOnce(L,`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`);
     else if(!online(h)) sysOnce(L,`${h.name} is offline right now. She'll reply when she's back, around ${clock(h.from)} her time.`);
@@ -314,7 +326,7 @@ document.addEventListener('click',e=>{
   const r=e.target.closest('[data-rm]'); if(r){ const g=r.dataset.rm; if(g==='sort') F.sort='online'; else F[g]=F[g].filter(x=>x!==r.dataset.k); saveF(); results(); return; }
   if(e.target.closest('#clearall,#reset')){ F.ages=[];F.countries=[];F.figures=[];F.sort='online';F.quick='all';F.q=''; saveF(); discover(); return; }
   if(e.target.closest('#fopen')) sheet(); });
-function route(){ const hs=location.hash.slice(1); let m; document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
+function route(){ const hs=location.hash.slice(1); let m; if(!/^chat-/.test(hs)) stopVoice(); document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
   if(hs==='favourites'){ F.quick='favs'; saveF(); history.replaceState(null,'',location.pathname+location.search); return discover(); }
   if((m=hs.match(/^host-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h){ window.scrollTo(0,0); return profile(h); } }
   if((m=hs.match(/^chat-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h) return chat(h); }

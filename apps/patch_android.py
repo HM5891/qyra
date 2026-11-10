@@ -5,6 +5,8 @@ m = 'android/app/src/main/AndroidManifest.xml'
 s = open(m).read()
 if 'permission.INTERNET' not in s:
     s = s.replace('<application', '<uses-permission android:name="android.permission.INTERNET"/>\n    <application', 1)
+if 'TTS_SERVICE' not in s:
+    s = s.replace('<application', '<queries>\n        <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>\n    </queries>\n    <application', 1)
 s = re.sub(r'android:label="[^"]*"', f'android:label="{label}"', s, count=1)
 open(m, 'w').write(s)
 for d in os.listdir(icons):
