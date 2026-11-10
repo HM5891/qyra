@@ -19,6 +19,13 @@
 .bond b{font-size:16px}.bond small{display:block;color:var(--mute)}
 .bar{height:6px;border-radius:9px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--accent);border-radius:9px}
 .lvl{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--accent)}
+.newmsg{position:absolute;top:10px;right:10px;z-index:3;padding:4px 9px;border-radius:99px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:800}
+.round.has{position:relative}.round.has::after{content:'';position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--bg,#0d0a0f)}
+.toast{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));z-index:50;display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:16px;background:var(--s2,#1c1620);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.45);text-decoration:none;color:inherit;animation:tin .25s ease-out}
+.toast .av{width:40px;height:40px;border-radius:50%;overflow:hidden;flex:none}.toast .av .pic,.toast .av .ph{width:100%;height:100%;object-fit:cover}
+.toast div{min-width:0}.toast b{display:block;font-size:14px}.toast span{display:block;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes tin{from{transform:translateY(-20px);opacity:0}}
+.empty{margin:auto;text-align:center;color:var(--mute);padding:30px 10px;font-size:14px}
 </style>
 </head>
 <body>
@@ -214,10 +221,10 @@ function sorted(list){ const by={young:(a,b)=>a.age-b.age,old:(a,b)=>b.age-a.age
   return list.slice().sort(by||((a,b)=>(online(b)-online(a))||0)); }
 const nFilters=()=>F.ages.length+F.countries.length+F.figures.length+(F.sort!=='online'?1:0);
 function card(h){ const on=online(h);
-  return `<a class="card ${on?'':'off'}" href="#host-${esc(h.id)}" aria-label="${esc(h.name)}, ${h.age}, ${esc(h.city)}. ${esc(status(h))}">${pic(h)}<div class="shade"></div><span class="tag">AI host</span>${on?'<span class="live"></span>':''}
+  return `<a class="card ${on?'':'off'}" href="#host-${esc(h.id)}" aria-label="${esc(h.name)}, ${h.age}, ${esc(h.city)}. ${esc(status(h))}">${pic(h)}<div class="shade"></div><span class="tag">AI host</span>${unread[h.id]?'<span class="newmsg">New message</span>':on?'<span class="live"></span>':''}
     <div class="meta"><b>${esc(h.name)}, ${h.age}</b><small>${esc(h.city)} · ${esc(h.country)}</small><small class="${on?'st':''}">${esc(status(h))}</small></div></a>`; }
 function discover(){ document.documentElement.classList.remove('chatmode');
-  $('#app').innerHTML=`<header class="top"><div class="wrap"><div class="logo" aria-label="Qyra"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;margin-right:6px;vertical-align:-2px;color:var(--accent)"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5L3 8z" fill="currentColor"/></svg>Qyra<span>.</span></div><a class="round" href="#favourites" id="favbtn" aria-label="Favourites">${I.heart}</a></div></header>
+  $('#app').innerHTML=`<header class="top"><div class="wrap"><div class="logo" aria-label="Qyra"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;margin-right:6px;vertical-align:-2px;color:var(--accent)"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 10H5L3 8z" fill="currentColor"/></svg>Qyra<span>.</span></div><a class="round${Object.keys(unread).some(k=>isFav(k))?' has':''}" href="#favourites" id="favbtn" aria-label="Favourites">${I.heart}</a></div></header>
   <main class="wrap">
     <div class="searchrow"><label class="search"><span class="sr">Search hosts</span>${I.search}<input type="search" id="q" placeholder="Search hosts" value="${esc(F.q)}" autocomplete="off"></label>
       <button class="fbtn" type="button" id="fopen" aria-haspopup="dialog">${I.sliders}<span>Filters</span></button></div>
@@ -286,12 +293,21 @@ function profile(h){ document.documentElement.classList.remove('chatmode'); cons
     else { favs.push(h.id); store.set('favs',favs); if(temp[h.id]){ store.set('chat-'+h.id,temp[h.id]); delete temp[h.id]; } profile(h); } }; }
 const getLog=h=>isFav(h.id)?store.get('chat-'+h.id,null):(temp[h.id]||null);
 const putLog=(h,l)=>{ if(isFav(h.id)) store.set('chat-'+h.id,l); else temp[h.id]=l; seen[h.id]=Date.now(); store.set('seen',seen); };
-const EN_ACCENT={India:'en-IN','United Kingdom':'en-GB',UK:'en-GB',England:'en-GB',Ireland:'en-IE',Australia:'en-AU','New Zealand':'en-NZ',Nigeria:'en-NG','South Africa':'en-ZA',Kenya:'en-KE',Ghana:'en-GH',Philippines:'en-PH',Singapore:'en-SG',Canada:'en-CA'};
-function voiceLang(h,text){ const s=String(text);
-  if(/[\u0900-\u097F]/.test(s)) return 'hi-IN'; if(/[\u3040-\u30FF]/.test(s)) return 'ja-JP'; if(/[\uAC00-\uD7AF]/.test(s)) return 'ko-KR';
-  if(/[\u4E00-\u9FFF]/.test(s)) return 'zh-CN'; if(/[\u0600-\u06FF]/.test(s)) return 'ar'; if(/[\u0400-\u04FF]/.test(s)) return 'ru-RU';
-  if(/[\u0E00-\u0E7F]/.test(s)) return 'th-TH'; if(/[\u0980-\u09FF]/.test(s)) return 'bn-IN'; if(/[\u0B80-\u0BFF]/.test(s)) return 'ta-IN';
-  return EN_ACCENT[h&&h.country]||'en-US'; }
+const LOC_COUNTRY={Brazil:'pt-BR',Canada:'en-CA',Colombia:'es-CO',France:'fr-FR',India:'hi-IN',Indonesia:'id-ID',Ireland:'en-IE',Italy:'it-IT',Japan:'ja-JP',Jordan:'ar-JO',Kenya:'sw-KE',Mexico:'es-MX',Nigeria:'en-NG',Norway:'nb-NO',Philippines:'fil-PH',Russia:'ru-RU','South Africa':'en-ZA','South Korea':'ko-KR',Spain:'es-ES',Thailand:'th-TH',Turkey:'tr-TR',UAE:'ar-AE',UK:'en-GB',USA:'en-US'};
+const LOC_CITY={Ahmedabad:'gu-IN',Bengaluru:'kn-IN',Chandigarh:'pa-IN',Chennai:'ta-IN',Delhi:'hi-IN',Goa:'hi-IN',Hyderabad:'te-IN',Jaipur:'hi-IN',Kolkata:'bn-IN',Pune:'mr-IN',Mumbai:'mr-IN',Montreal:'fr-CA',Barcelona:'ca-ES','Cape Town':'af-ZA',Pretoria:'af-ZA',Durban:'zu-ZA',Johannesburg:'zu-ZA','Port Elizabeth':'xh-ZA',Cebu:'fil-PH',Davao:'fil-PH'};
+const LOC_NAME={hindi:'hi-IN',gujarati:'gu-IN',marathi:'mr-IN',tamil:'ta-IN',telugu:'te-IN',kannada:'kn-IN',bengali:'bn-IN',punjabi:'pa-IN',malayalam:'ml-IN',urdu:'ur-IN',english:'en-US',spanish:'es-ES',portuguese:'pt-BR',french:'fr-FR',italian:'it-IT',german:'de-DE',japanese:'ja-JP',korean:'ko-KR',chinese:'zh-CN',arabic:'ar-SA',russian:'ru-RU',turkish:'tr-TR',thai:'th-TH',indonesian:'id-ID',swahili:'sw-KE',norwegian:'nb-NO',filipino:'fil-PH',tagalog:'fil-PH',afrikaans:'af-ZA',zulu:'zu-ZA',catalan:'ca-ES',dutch:'nl-NL',polish:'pl-PL',vietnamese:'vi-VN'};
+const EN_ACCENT={India:'en-IN',UK:'en-GB','United Kingdom':'en-GB',Ireland:'en-IE',Australia:'en-AU','New Zealand':'en-NZ',Nigeria:'en-NG','South Africa':'en-ZA',Kenya:'en-KE',Philippines:'en-PH',Singapore:'en-SG',Canada:'en-CA'};
+const EN_WORDS=new Set('i you he she we they it is are was were am be been the a an and or but to of in on at for with my your me him her this that what why how when where who do does did not no yes so just like love miss really good bad very know think want can will would have has had there here today now too about please sorry okay ok baby honey'.split(' '));
+function nativeLoc(h){ if(!h) return 'en-US'; const l=String(h.lang||'').toLowerCase(); for(const k in LOC_NAME) if(l.includes(k)) return LOC_NAME[k]; return LOC_CITY[h.city]||LOC_COUNTRY[h.country]||'en-US'; }
+function voiceLang(h,text){ const s=String(text), nat=nativeLoc(h);
+  if(/[઀-૿]/.test(s)) return 'gu-IN'; if(/[਀-੿]/.test(s)) return 'pa-IN'; if(/[஀-௿]/.test(s)) return 'ta-IN';
+  if(/[ఀ-౿]/.test(s)) return 'te-IN'; if(/[ಀ-೿]/.test(s)) return 'kn-IN'; if(/[ഀ-ൿ]/.test(s)) return 'ml-IN'; if(/[ঀ-৿]/.test(s)) return 'bn-IN';
+  if(/[ऀ-ॿ]/.test(s)) return nat==='mr-IN'?'mr-IN':'hi-IN';
+  if(/[぀-ヿ]/.test(s)) return 'ja-JP'; if(/[가-힯]/.test(s)) return 'ko-KR'; if(/[一-鿿]/.test(s)) return 'zh-CN';
+  if(/[؀-ۿ]/.test(s)) return nat.startsWith('ar')?nat:'ar-SA'; if(/[Ѐ-ӿ]/.test(s)) return 'ru-RU'; if(/[฀-๿]/.test(s)) return 'th-TH';
+  const w=s.toLowerCase().match(/[a-z']+/g)||[]; const en=w.filter(x=>EN_WORDS.has(x)).length;
+  const english=w.length===0||en/w.length>=0.25; const latinNative=/^(pt|es|fr|it|id|sw|nb|fil|tr|af|zu|xh|ca|de|nl|pl|vi)/.test(nat);
+  if(!english&&latinNative) return nat; return EN_ACCENT[h&&h.country]||'en-US'; }
 const sayable=t=>String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu,'').replace(/\*+/g,'').trim();
 function stopVoice(){ try{ if(window.QyraVoice&&QyraVoice.postMessage) QyraVoice.postMessage(JSON.stringify({stop:true})); else if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){} }
 function speak(text,h){ const t=sayable(text); if(!t) return false; const lang=voiceLang(h,t);
@@ -305,13 +321,13 @@ const device=(()=>{ let d=store.get('device',''); if(!d){ d=(window.crypto&&cryp
 const lastReal=log=>{ for(let i=log.length-1;i>=0;i--) if(log[i].w!=='sys') return log[i]; return null; };
 function sysOnce(log,t){ const l=log[log.length-1]; if(!l||l.t!==t) log.push({w:'sys',t}); }
 const rerender=h=>{ if(location.hash==='#chat-'+h.id) chat(h); };
-async function askReply(h,away){ const opener=away>0; if(!AI_URL||busy[h.id]) return; let log=getLog(h); const lr=log&&lastReal(log); if(!lr||(!opener&&lr.w!=='me')) return;
+async function askReply(h,away){ const opener=typeof away==='number'; if(!AI_URL||busy[h.id]) return; let log=getLog(h)||[]; const lr=lastReal(log); if(!opener&&(!lr||lr.w!=='me')) return;
   busy[h.id]=true; rerender(h); const t0=Date.now(); let reply=null, err='';
-  try{ const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostId:h.id,device,history:log.filter(m=>m.w!=='sys').slice(-24),bond:bondOf(h.id).lv,others:rivals(h.id),...(opener?{opener:true,awayHours:away}:{})})});
+  try{ const r=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostId:h.id,device,history:log.filter(m=>m.w!=='sys').slice(-24),bond:bondOf(h.id).lv,others:rivals(h.id),...(opener?{opener:true,awayHours:Math.max(0,away),first:away<0||!lr}:{})})});
     const j=await r.json().catch(()=>({})); if(r.ok&&j.reply) reply=String(j.reply); else err=j.error||'ai'; }catch(e){ err='offline'; }
   const feel=Math.min(2600,700+(reply?reply.length*22:0)); await new Promise(r=>setTimeout(r,Math.max(0,feel-(Date.now()-t0))));
-  busy[h.id]=false; log=getLog(h)||log;
-  if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; if(voice[h.id]&&location.hash==='#chat-'+h.id) speak(reply,h); }
+  busy[h.id]=false; log=getLog(h)||log; const here=location.hash==='#chat-'+h.id;
+  if(reply){ log.push({w:'her',t:reply}); delete failed[h.id]; if(voice[h.id]&&here) speak(reply,h); if(!here){ unread[h.id]=1; store.set('unread',unread); toast(h,reply); if(!location.hash) results(); const fb=$('#favbtn'); if(fb) fb.classList.add('has'); } }
   else if(opener){ failed[h.id]=Date.now(); }
   else { failed[h.id]=Date.now(); sysOnce(log,err==='daily_limit'?"You've used today's free replies. Hosts can chat with you again tomorrow."
     :err==='busy'?`${h.name} is getting lots of messages. Send again in a minute.`
@@ -320,7 +336,8 @@ async function askReply(h,away){ const opener=away>0; if(!AI_URL||busy[h.id]) re
 let seen=store.get('seen',{}), due={};
 function chat(h){ document.documentElement.classList.add('chatmode'); let log=getLog(h);
   const now=Date.now(), last=seen[h.id]||0, awayH=(now-last)/36e5;
-  if(location.hash==='#chat-'+h.id&&!busy[h.id]&&awayH>=0.1){ if(last>0&&awayH>=4&&log&&log.some(m=>m.w==='me')) due[h.id]=awayH; seen[h.id]=now; store.set('seen',seen); } if(!log){ log=[{w:'her',t:h.greeting}]; putLog(h,log); if(voice[h.id]) setTimeout(()=>speak(h.greeting,h),300); }
+  if(unread[h.id]){ delete unread[h.id]; store.set('unread',unread); }
+  if(location.hash==='#chat-'+h.id&&!busy[h.id]&&awayH>=0.1){ if(isFav(h.id)&&(!log||!log.some(m=>m.w!=='sys')||(last>0&&awayH>=1))) due[h.id]=(log&&log.some(m=>m.w!=='sys'))?awayH:-1; seen[h.id]=now; store.set('seen',seen); } if(!log) log=[];
   if(AI_URL&&log.some(m=>m.w==='sys'&&/switch on once/.test(m.t))){ log=log.filter(m=>!(m.w==='sys'&&/switch on once/.test(m.t))); putLog(h,log); }
   const on=online(h), v=!!voice[h.id], keep=$('#msg')?$('#msg').value:'', typing=!!busy[h.id];
   $('#app').innerHTML=`<div class="ch" style="--ac:${esc(h.accent||'#f09ab0')}"><header class="top"><div class="wrap"><a class="round" href="#host-${esc(h.id)}" aria-label="Back to ${esc(h.name)}'s profile">${I.back}</a>
@@ -328,6 +345,7 @@ function chat(h){ document.documentElement.classList.add('chatmode'); let log=ge
     <div class="msgs wrap" id="msgs" aria-live="polite">
       ${on?'':`<div class="note">${esc(h.name)} is offline. She is usually online ${clock(h.from)} – ${clock(h.until)} her time, and replies when she's back.</div>`}
       ${isFav(h.id)?'':`<div class="m sys">${esc(h.name)} is not in your Favourites, so she forgets this chat when you leave.</div>`}
+      ${log.some(m=>m.w!=='sys')||typing?'':`<p class="empty">${isFav(h.id)&&on&&AI_URL?`${esc(h.name)} is opening your chat…`:`Say hi to ${esc(h.name)} to start talking.`}</p>`}
       ${log.map((m,i)=>`<div class="m ${m.w}">${esc(m.t)}</div>`).join('')}
       ${typing?'<div class="m her typing" aria-label="typing"><i></i><i></i><i></i></div>':''}</div>
     <div class="comp"><div class="wrap"><form id="f"><label for="msg" class="sr">Message ${esc(h.name)}</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Message ${esc(h.name)}…"><button class="send" type="submit" aria-label="Send">${I.send}</button></form></div></div></div>`;
@@ -336,7 +354,7 @@ function chat(h){ document.documentElement.classList.add('chatmode'); let log=ge
     if(!AI_URL) sysOnce(L,`${h.name}'s replies switch on once Qyra's AI server is connected. Your messages are saved.`);
     else if(!online(h)) sysOnce(L,`${h.name} is offline right now. She'll reply when she's back, around ${clock(h.from)} her time.`);
     putLog(h,L); $('#msg').value=''; chat(h); setTimeout(()=>{ const i=$('#msg'); if(i) i.focus(); },0); };
-  if(AI_URL&&on&&!typing&&!(failed[h.id]&&Date.now()-failed[h.id]<60000)){ const lr=lastReal(log); if(lr&&lr.w==='me') setTimeout(()=>askReply(h),0); else if(due[h.id]&&lr){ const a=due[h.id]; delete due[h.id]; setTimeout(()=>askReply(h,a),600); } } }
+  if(AI_URL&&on&&!typing&&!(failed[h.id]&&Date.now()-failed[h.id]<60000)){ const lr=lastReal(log); if(lr&&lr.w==='me') setTimeout(()=>askReply(h),0); else if(due[h.id]!==undefined){ const a=due[h.id]; delete due[h.id]; setTimeout(()=>askReply(h,a),900); } } }
 document.addEventListener('click',e=>{
   const q=e.target.closest('[data-quick]'); if(q){ F.quick=q.dataset.quick; saveF(); document.querySelectorAll('[data-quick]').forEach(b=>b.setAttribute('aria-pressed',b===q)); results(); return; }
   const r=e.target.closest('[data-rm]'); if(r){ const g=r.dataset.rm; if(g==='sort') F.sort='online'; else F[g]=F[g].filter(x=>x!==r.dataset.k); saveF(); results(); return; }
@@ -359,6 +377,16 @@ function gate(){ document.documentElement.classList.remove('chatmode');
     <button class="btn pri" type="button" id="g-yes">I'm 18 or older, enter</button><button class="btn" type="button" id="g-no">I'm under 18</button></div></div>`;
   $('#g-yes').onclick=()=>{ store.set('adult',Date.now()); route(); };
   $('#g-no').onclick=()=>{ $('#app').innerHTML=`<div class="gate"><div class="in"><h1>Qyra<span>.</span></h1><p>Sorry, Qyra is only for adults. Please close the app.</p></div></div>`; }; }
+let unread=store.get('unread',{}), pro=store.get('pro',{d:'',n:0});
+function toast(h,text){ const old=$('#toast'); if(old) old.remove(); const a=document.createElement('a'); a.className='toast'; a.id='toast'; a.href='#chat-'+h.id;
+  a.innerHTML=`<span class="av">${pic(h)}</span><div><b>${esc(h.name)}</b><span>${esc(String(text).slice(0,90))}</span></div>`; document.body.appendChild(a);
+  a.onclick=()=>a.remove(); setTimeout(()=>{ if(a.isConnected) a.remove(); },7000); }
+function proactive(){ try{ if(!AI_URL||document.hidden||!store.get('adult',0)) return; const day=new Date().toISOString().slice(0,10); if(pro.d!==day) pro={d:day,n:0}; if(pro.n>=4) return;
+  const now=Date.now(); const c=HOSTS.filter(h=>isFav(h.id)&&online(h)&&!busy[h.id]&&!unread[h.id]&&location.hash!=='#chat-'+h.id&&now-(seen[h.id]||0)>3*36e5);
+  if(!c.length) return; const h=c[Math.floor(Math.random()*c.length)]; const has=(getLog(h)||[]).some(m=>m.w!=='sys');
+  pro.n++; store.set('pro',pro); askReply(h,has?Math.min(240,(now-(seen[h.id]||0))/36e5):-1); }catch(e){} }
+setTimeout(proactive,(2+Math.random()*3)*60000); setInterval(()=>{ if(Math.random()<0.4) proactive(); },10*60000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(proactive,20000); });
 function route(){ const hs=location.hash.slice(1); let m; if(!store.get('adult',0)) return gate(); if(!/^chat-/.test(hs)) stopVoice(); document.documentElement.classList.remove('locked'); const sc=$('#scrim'); if(sc) sc.remove();
   if(hs==='favourites'){ F.quick='favs'; saveF(); history.replaceState(null,'',location.pathname+location.search); return discover(); }
   if((m=hs.match(/^host-(.+)$/))){ const h=HOSTS.find(x=>x.id===m[1]); if(h){ window.scrollTo(0,0); return profile(h); } }

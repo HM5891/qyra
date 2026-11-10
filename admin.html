@@ -209,7 +209,7 @@ function openEditor(id){ const h=data.hosts.find(x=>x.id===id); if(!h){ location
     ${field('country','Country',cur.country)}${field('city','City',cur.city)}${field('job','Job',cur.job,'text','wide')}
     ${field('status','Status line (changes with her mood)',cur.status,'text','wide')}
     ${area('greeting','First message to a new user',cur.greeting)}${area('about','About her',cur.about)}
-    ${field('moods','Moods (comma separated)',Array.isArray(cur.moods)?cur.moods.join(', '):cur.moods,'text','wide')}${field('voice','Voice',cur.voice,'text','wide')}
+    ${field('moods','Moods (comma separated)',Array.isArray(cur.moods)?cur.moods.join(', '):cur.moods,'text','wide')}${field('voice','Voice',cur.voice,'text','wide')}${field('lang','Native language (empty = automatic from her city)',cur.lang,'text','wide')}
     <div class="f"><label for="f-accent">Card colour</label><input type="color" id="f-accent" data-k="accent" value="${esc(cur.accent||'#a8335f')}" style="width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:11px;background:var(--bg)"></div>
   </div></div>
   <div class="card"><h2>Online schedule</h2><p class="sub">She comes online by her own local time.</p><div class="grid">
@@ -271,7 +271,7 @@ function addHost(){ const id='host-'+Math.random().toString(36).slice(2,8);
 async function publish(){ const live=data.hosts.filter(h=>!h.hidden&&hasCover(h)), skipped=data.hosts.filter(h=>!h.hidden&&!hasCover(h)).length; if(!live.length){ note('No host has a cover photo yet. Add a Cover photo to at least one host, then publish.','warn'); return; }
   const btn=$('#publish'); btn.disabled=true; note('Publishing to the app…');
   try{ const out=live.map(h=>({id:h.id,name:h.name,age:h.age,country:h.country,city:h.city,job:h.job,tz:h.tz,from:h.from,until:h.until,alwaysOn:!!h.alwaysOn,status:h.status,greeting:h.greeting,about:h.about,
-      moods:(Array.isArray(h.moods)?h.moods:String(h.moods||'').split(',')).map(s=>String(s).trim()).filter(Boolean),voice:h.voice,accent:h.accent,figure:(h.look||{}).figure||'',photos:(h.photos||[]).map(p=>p&&p.path?p.path:null)}));
+      moods:(Array.isArray(h.moods)?h.moods:String(h.moods||'').split(',')).map(s=>String(s).trim()).filter(Boolean),voice:h.voice,...(String(h.lang||'').trim()?{lang:String(h.lang).trim()}:{}),accent:h.accent,figure:(h.look||{}).figure||'',photos:(h.photos||[]).map(p=>p&&p.path?p.path:null)}));
     const f=await getFile(cfg.pub,'hosts.json');
     await putFile(cfg.pub,'hosts.json',b64e(JSON.stringify({app:'Qyra',updated:new Date().toISOString(),hosts:out},null,1)),`Publish ${out.length} hosts`,f&&f.sha);
     data.published=new Date().toISOString(); scheduleSave(true); $('#list').innerHTML=''; renderList();

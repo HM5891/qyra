@@ -32,12 +32,14 @@ class _ShellState extends State<Shell> {
     try {
       await tts.stop();
       if (lang != lastLang) {
-        var ok = await tts.isLanguageAvailable(lang);
-        if (ok != true && lang.startsWith('en-')) {
-          lang = 'en-US';
-          ok = true;
+        String use = 'en-US';
+        for (final l in [lang, lang.split('-').first]) {
+          if (await tts.isLanguageAvailable(l) == true) {
+            use = l;
+            break;
+          }
         }
-        if (ok == true) await tts.setLanguage(lang);
+        await tts.setLanguage(use);
         lastLang = lang;
       }
       await tts.speak(text);
